@@ -1,0 +1,6 @@
+"0","## Les graphiques situés sur la diagonale représentent la distribution des variables"
+"0","## Les graphiques (ou les valeurs de corrélation) situés au dessus et en dessous de la diagonale représentent l'association entre les différentes variables"
+"0","ggpairs(my_data.regord2,"
+"0","        lower = list(continuous = wrap(""smooth"", alpha = 0.7), combo = ""box_no_facet""),"
+"0","        upper = list(combo = ""facetdensity"", discrete = ""facetbar""), "
+"0","        mapping = aes(alpha = 0.8)) + theme_bw()"

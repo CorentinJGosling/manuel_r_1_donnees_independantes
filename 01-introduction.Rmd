@@ -1,0 +1,30 @@
+# Introduction {#intro}
+
++ **ATTENTION**<br>
+Ce manuel n'a pas fait l'objet d'une évaluation indépendante par les pairs : il reste encore un document de travail. Des corrections/améliorations seront donc apportées dans les prochaines actualisations du manuel.
+
++ **Quel est le but de ce manuel** ?<br>
+L’unique objectif de ce manuel est de fournir un support technique pour analyser des données **indépendantes** à l’aide du logiciel R. 
+
++ **Que sont des données indépendantes**<br>
+Des données indépendantes correspondent à des plans expérimentaux où chacune de vos observations collectées sont indépendantes les unes des autres. Par exemple, si vos unités statistiques sont des individus, les données seront dites indépendantes si les informations collectées auprès d'un individu sont indépendantes des informations collectées auprès des autres individus de l'échantillon.<br>
+
+  + En psychologie cognitive, des études classiques produisant des données non-indépendantes sont les études demandant à des participants de compléter des tâches expérimentales comportant de multiples essais. Dans cette situation, votre unité statistique de plus bas niveau (l'essai) n'est pas indépendante. La performance à un essai donné aura plus de chance d'être corrélée à la performance aux autres essais du même individu qu'à la performance aux essais réalisés par d'autres individus.
+  
+  + En neuropsychologie, des études classiques produisant des données non-indépendantes sont les études collectant des données de patients provenant de divers hôpitaux. Dans cette situation, votre unité statistique de plus bas niveau (le patient) n'est pas indépendante. La performance d'un patient aura plus de chance d'être corrélée à la performance de patients du même hôpital qu'à la performance de patients provenant d'hôpitaux différents.
+
+  + En psychologie développementale, des études classiques produisant des données non-indépendantes sont les études collectant des données d'enfants répartis dans différentes classes ou écoles. Là encore, dans cette situation, votre unité statistique de plus bas niveau (l'enfant) n'est pas indépendante. La performance d'un enfant aura plus de chances d'être corrélée à la performance d'enfants de la même classe/école qu'à la performance d'enfants provenant de classes/écoles différentes.
+
+Dans ces situations de non-indépendance, deux solutions sont généralement utilisées. <br>
+
+1) La solution la plus recommandée est d'utiliser des analyses statistiques adaptées aux données dépendantes, parfois appelées analyses hiérarchiques ou multiniveaux (telles que les ANOVAs à mesures répétées, les modèles mixtes, les équations d'estimation généralisées, etc..). La façon d'implanter ces analyses dans R n'est pas décrite dans ce manuel, qui est centré sur les analyses adaptées aux données indépendantes. <br>
+
+2) Une autre solution est d'aggréger vos unités statistiques de plus bas niveau non-indépendantes (e.g., les différents essais d'un même participant ou les différents enfants d'une même classe) au sein d'unités statistiques de plus haut niveau mais indépendantes. Dans une situation expérimentale comportant une tâche avec de nombreux essais, il est possible d'aggréger tous les essais en en faisant une moyenne pour chaque participant. Ce score aggrégé, propre à chaque participant, sera parfaitement indépendant du score aggrégé des autres participants. Il devient possible d'utiliser des analyses statistiques pour données indépendantes sur ce score aggrégé. Ici votre unité statistique de bas niveau (les essais) était non-indépendante, et l'utilisation d'une unité statistique de plus haut niveau (les participants) permet d'avoir des données indépendantes. Cependant, cette seconde approche n'est pas recommandée (voir par exemple la discussion au sujet des données non-indépendantes proposée par Aarts et al. (2014) dans Nature Neuroscience).
+
++ **Pourquoi décrire ces analyses sur le logiciel R et non des logiciels standards (SPSS, Jamovi, ... ?)**<br>
+Le logiciel R présente plusieurs avantages comparativements à certains logiciels statistiques plus fréquemment utilisés : (1) R est gratuit, (2) R permet de réaliser une très grande variété d’analyses statistiques et (3) R permet de partager aux lecteurs de vos articles le code qui accompagne l'analyse des données.
+
++ **Les analyses statistiques décrites dans ce manuel sont-elles suffisantes pour analyser des données collectées lors d’une étude ?**<br>
+A l’heure actuelle, en plus des analyses statistiques, ce manuel décrit comment observer la distribution de vos variables, comment faire des graphiques illustrant les analyses statistiques réalisées et comment réaliser différents tests post-hoc et obtenir des tailles d'effet.<br> 
+En revanche, ce manuel suppose que les hypothèses fondamentales des différentes analyses statistiques sont respectées (e.g., si vous utilisez une régression linéaire, le code proposé dans ce manuel suppose que l’hypothèse de normalité des résidus est respectée).<br> 
+

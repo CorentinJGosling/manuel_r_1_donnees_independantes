@@ -1,0 +1,3469 @@
+# Réalisation des analyses statistiques
+
+Les vignettes suivantes décrivent la façon d'implanter différentes analyses statistiques. Reportez-vous au numéro de vignette indiqué par l'arbre décisionnel afin d'avoir un exemple de l'analyse statistique dont vous avez besoin. 
+
+## Une seule VD numérique
+
+### Test t indépendant
+
+#### Type de variables
+**Variable Dépendante :** Numérique <br>
+**Variable Indépendante :** Catégorielle (2 catégories) 
+
+#### Packages nécessaires
+```{r message=FALSE, warning=FALSE}
+library(ggplot2)
+library(GGally)
+library(forcats)
+library(dplyr)
+library(rstatix)
+library(readxl)
+```
+
+#### Données réelles 
+```{r eval = FALSE}
+# choisissez la ligne appropriée au format de votre fichier de données. 
+
+# si vos données sont dans un fichier .txt
+my_data.ttest <- read.delim(file.choose())
+
+# si vos données sont dans un fichier .csv
+my_data.ttest <- read.csv(file.choose())
+
+# si vos données sont dans un fichier .xls / .xlsx
+my_data.ttest <- read_excel(file.choose())
+
+# une fois vos données chargées, vous pouvez renommer vos noms de colonnes afin qu'ils correspondent à ceux utilisés dans le code ci-dessous
+# Si vous ne souhaitez pas renommer vos noms de colonnes, sautez cette étape mais adaptez le code des parties suivantes en lui indiquant les noms de colonnes de vos données.
+
+# On crée une nouvelle colonne pour votre variable dépendante continue (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.ttest$VD1.cont <- my_data.ttest$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour votre variable indépendante catégorielle (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.ttest$VI1.cat <- my_data.ttest$'votre.nom.de.colonne'
+```
+
+#### Données fictives
+```{r}
+set.seed(4321)
+my_data.ttest <- data.frame(
+  VD1.cont = rnorm(30),
+  VI1.cat = rep(c(1, 2), each = 15))
+
+# On renomme les catégories de VI1.cat pour que les résultats soient plus lisibles
+my_data.ttest$VI1.cat <- fct_recode(factor(my_data.ttest$VI1.cat), 
+                                 "Groupe 1" = "1", 
+                                 "Groupe 2" = "2") 
+```
+
+#### Déclaration du type de variable
+```{r}
+my_data.ttest$VD1.cont <- as.numeric(as.character(my_data.ttest$VD1.cont))
+my_data.ttest$VI1.cat <- factor(my_data.ttest$VI1.cat)
+```
+
+#### Inspection visuelle des données
+```{r}
+## Les graphiques situés sur la diagonale représentent la distribution des variables
+## Les graphiques (ou les valeurs de corrélation) situés au dessus et en dessous de la diagonale représentent les associations deux-à-deux
+ggpairs(my_data.ttest,
+        lower = list(continuous = wrap("smooth", alpha = 0.7), combo = "box_no_facet"),
+        upper = list(combo = "facetdensity", discrete = "facetbar"), 
+        mapping = aes(alpha = 0.8)) + theme_bw()
+```
+
+#### Analyse des données
+```{r warning=FALSE, message=FALSE}
+# calcul du test t et stockage des résultats dans l’objet t.test
+t.test <- t.test(formula = VD1.cont ~ VI1.cat, 
+                 data = my_data.ttest,
+                 var.equal = TRUE)
+
+# calcul des moyennes et écarts types pour les deux modalités de VI.cat
+description.ttest <- my_data.ttest %>% 
+  group_by(VI1.cat) %>% 
+  summarise(
+    Mean = mean(VD1.cont),
+    SD = sd(VD1.cont),
+    N = n())
+
+# calcul de la taille d'effet de VI1.cat sur VD1.cont (SMD / d de cohen)
+cohensd.ttest <- rstatix::cohens_d(data = my_data.ttest,
+                    formula = VD1.cont ~ VI1.cat, 
+                    var.equal = TRUE)
+
+# obtention des différentes moyennes/écarts-types 
+description.ttest
+
+# obtention des résultats du test t 
+t.test
+
+# obtention de la taille d'effet
+cohensd.ttest
+```
+
+#### Graphique
+```{r}
+ggplot(my_data.ttest, aes(x = VI1.cat, y = VD1.cont, fill = VI1.cat)) +
+  geom_boxplot(color = "black", outlier.color = "red") + 
+  geom_jitter(size = 3, alpha = 0.4, width = 0.1) + 
+  ylab("VD1.cont") + xlab("VI1.cat") + 
+  theme_bw() + 
+  theme(axis.title.y = element_text(size = 14, hjust = 0.5, face = "bold"), 
+        axis.title.x = element_text(face ="bold", size = 14, hjust = 0.5)) +
+  scale_fill_grey(start = 0.8, end = 0.5) +
+  guides(fill = FALSE)
+```
+
+#### Interpretation
+```{r, results='asis', echo=FALSE}
+paste0(
+  "Les scores moyens du groupe 1 (M = ", 
+  round(description.ttest$Mean[1], digits = 3),
+  ", SD = ", 
+  round(description.ttest$SD[1], digits = 3), 
+  ", N = ", 
+  description.ttest$N[1], 
+  ") et du groupe 2 (M = ",
+  round(description.ttest$Mean[2], digits = 3), 
+  ", SD = ", 
+  round(description.ttest$SD[2], digits = 3), 
+  ", N = ", 
+  description.ttest$N[2],
+  ") ne diffèrent pas statistiquement (t = ",
+  round(t.test$statistic, digits = 3), 
+  ", p =  ",
+  round(t.test$p.value, digits = 3), 
+  ", d de cohen = ",
+  abs(round(cohensd.ttest$effsize, digits = 3)), 
+  ")")
+```
+
+### ANOVA à un facteur
+
+#### Type de variables
+
+**Variable Dépendante :** Numérique <br>
+**Variable Indépendante :** Catégorielle (3 catégories ou +) 
+
+#### Packages nécessaires
+```{r warning=FALSE, message=FALSE}
+library(ggplot2)
+library(GGally)
+library(dplyr)
+library(emmeans)
+library(car)
+library(forcats)
+library(rstatix)
+library(broom)
+```
+
+#### Données réelles 
+```{r eval = FALSE}
+# choisissez la ligne appropriée au format de votre fichier de données. 
+
+# si vos données sont dans un fichier .txt
+my_data.anova <- read.delim(file.choose())
+
+# si vos données sont dans un fichier .csv
+my_data.anova <- read.csv(file.choose())
+
+# si vos données sont dans un fichier .xls / .xlsx
+my_data.anova <- read_excel(file.choose())
+
+# une fois vos données chargées, vous pouvez renommer vos noms de colonnes afin qu'ils correspondent à ceux utilisés dans le code ci-dessous
+# Si vous ne souhaitez pas renommer vos noms de colonnes, sautez cette étape mais adaptez le code des parties suivantes en lui indiquant les noms de colonnes de vos données.
+
+# On crée une nouvelle colonne pour votre variable dépendante continue (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.anova$VD1.cont <- my_data.anova$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour votre variable indépendante catégorielle (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.anova$VI1.multicat <- my_data.anova$'votre.nom.de.colonne'
+```
+
+#### Données fictives
+```{r}
+set.seed(4321)
+my_data.anova <- data.frame(
+  VD1.cont = c(rnorm(30)-1, rnorm(90)),
+  VI1.multicat = rep(c(1, 2, 3, 4), each = 30))
+
+# On renomme les catégories de VI1.cat pour que les résultats soient plus lisibles
+ my_data.anova$VI1.multicat <- fct_recode(factor(my_data.anova$VI1.multicat), 
+                                 "Groupe 1" = "1", 
+                                 "Groupe 2" = "2", 
+                                 "Groupe 3" = "3", 
+                                 "Groupe 4" = "4") 
+```
+
+#### Déclaration du type de variables
+```{r}
+my_data.anova$VD1.cont <- as.numeric(as.character(my_data.anova$VD1.cont))
+my_data.anova$VI1.multicat <- factor(my_data.anova$VI1.multicat)
+```
+
+#### Inspection des données
+```{r}
+## Les graphiques situés sur la diagonale représentent la distribution des variables
+## Les graphiques (ou les valeurs de corrélation) situés au dessus et en dessous de la diagonale représentent les associations deux-à-deux
+ggpairs(my_data.anova,
+        lower = list(continuous = wrap("smooth", alpha = 0.7), combo = "box_no_facet"),
+        upper = list(combo = "facetdensity"), 
+        mapping = aes(alpha = 0.8)) + theme_bw()
+```
+
+#### Analyse des données
+```{r warning=FALSE, message=FALSE}
+# calcul de l'ANOVA et stockage des résultats dans l’objet anova.test
+anova.test <- lm(formula = VD1.cont ~ VI1.multicat,
+                 data = my_data.anova)
+
+# calcul des moyennes et écarts types pour chaque modalité de VI.multicat
+description.anova <- my_data.anova %>% 
+  group_by(VI1.multicat) %>% 
+  summarise(
+    Mean = mean(VD1.cont),
+    SD = sd(VD1.cont),
+    N = n())
+
+# calcul des tests post hoc (comparaison de moyennes deux à deux) ajustées par une procédure tukey.
+posthoc.anova <- emmeans(anova.test, pairwise ~ VI1.multicat, adjust = "tukey")
+
+# calcul de la taille d'effet de VI1.multicat sur VD1.cont (SMD / d de cohen)
+cohensd.anova <- rstatix::cohens_d(data = my_data.anova,
+                    formula = VD1.cont ~ VI1.multicat, 
+                    var.equal = TRUE)
+
+
+# obtention des différentes moyennes/écarts-types pour chaque groupe
+description.anova
+
+# obtention des résultats de l'anova 
+Anova(anova.test)
+
+# obtention des tests post hoc 
+posthoc.anova
+
+# obtention des tailles d'effet 
+cohensd.anova
+```
+
+#### Graphique
+```{r}
+ggplot(my_data.anova, aes(x = VI1.multicat, y = VD1.cont, fill = VI1.multicat)) +
+  geom_boxplot(color="black", outlier.color="red") + 
+  geom_jitter(size = 3, alpha=0.4, width=0.1) + 
+  ylab("VD1.cont") + xlab("VI1.cat") + 
+  theme_bw() + 
+  theme(axis.title.y = element_text(size = 14, hjust = 0.5, face="bold"), 
+        axis.title.x = element_text(face="bold", size = 14, hjust = 0.5)) +
+  scale_fill_grey(start = 0.9, end = 0.5) +
+  guides(fill = FALSE)
+```
+
+#### Interpretation
+```{r,results='asis', echo=FALSE}
+paste0(
+  "L'effet principal de VI1.multicat est significatif (F = ",
+  round(tidy(Anova(anova.test))$statistic[1], digits = 3),
+  ", p = ",
+  round(tidy(Anova(anova.test))$p.value[1], digits = 8),
+  "). ",
+  "Les scores moyens du groupe 1 (M = ", 
+  round(description.anova$Mean[1], digits = 3),
+  ", SD = ", 
+  round(description.anova$SD[1], digits = 3), 
+  ", N = ", 
+  description.anova$N[1], 
+  ") sont significativement plus faibles que les scores moyens de 3 autres groupes (toutes les valeurs p ajustées < ",
+  max(round(summary(posthoc.anova)$contrasts$p.value[1:3], digits = 5)),
+  ", d de cohen > ",
+  min(abs(round(cohensd.anova$effsize[1:3], digits=3))),
+  "). Aucune autre différence n'atteint la significativité (toutes les valeurs p ajustées > ",
+  min(round(summary(posthoc.anova)$contrasts$p.value[4:6], digits = 3)),
+    ", d de cohen < ",
+  max(abs(round(cohensd.anova$effsize[4:6], digits = 3))),
+  ")")
+
+```
+
+### Corrélation
+
+#### Type de variables
+
+**Variable Dépendante :** Numérique <br>
+**Variable Indépendante :** Numérique 
+
+#### Packages nécessaires
+```{r message=FALSE}
+library(ggplot2)
+library(GGally)
+library(rstatix)
+library(dplyr)
+```
+
+#### Données réelles 
+```{r eval = FALSE}
+# choisissez la ligne appropriée au format de votre fichier de données. 
+
+# si vos données sont dans un fichier .txt
+my_data.correlation <- read.delim(file.choose())
+
+# si vos données sont dans un fichier .csv
+my_data.correlation <- read.csv(file.choose())
+
+# si vos données sont dans un fichier .xls / .xlsx
+my_data.correlation <- read_excel(file.choose())
+
+# une fois vos données chargées, vous pouvez renommer vos noms de colonnes afin qu'ils correspondent à ceux utilisés dans le code ci-dessous
+# Si vous ne souhaitez pas renommer vos noms de colonnes, sautez cette étape mais adaptez le code des parties suivantes en lui indiquant les noms de colonnes de vos données.
+
+# On crée une nouvelle colonne pour votre variable dépendante continue (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.correlation$VD1.cont <- my_data.correlation$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour votre variable indépendante continue (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.correlation$VI1.cont <- my_data.correlation$'votre.nom.de.colonne'
+```
+
+#### Données fictives
+```{r}
+set.seed(4321)
+cor <- rnorm(130)
+my_data.correlation <- data.frame(
+  VD1.cont = rnorm(130) + 0.5*cor,
+  VI1.cont = rnorm(130) + 0.5*cor)
+```
+
+#### Déclaration du type de variables
+```{r}
+my_data.correlation$VD1.cont <- as.numeric(as.character(my_data.correlation$VD1.cont))
+my_data.correlation$VI1.cont <- as.numeric(as.character(my_data.correlation$VI1.cont))
+```
+
+#### Inspection des données
+```{r}
+## Les graphiques situés sur la diagonale représentent la distribution des variables
+## Les graphiques (ou les valeurs de corrélation) situés au dessus et en dessous de la diagonale représentent les associations deux-à-deux
+ggpairs(my_data.correlation,
+        lower = list(continuous = wrap("smooth", alpha = 0.7), combo = "box_no_facet"),
+        upper = list(combo = "facetdensity", discrete = "facetbar"), 
+        mapping = aes(alpha = 0.8)) + theme_bw()
+```
+
+#### Analyse des données 
+```{r}
+# calcul de la corrélation et stockage des résultats dans l’objet correlation.test
+correlation.test <- cor.test(formula = ~ VD1.cont + VI1.cont, 
+                 data = my_data.correlation,
+                 method = "pearson")
+
+# obtention des résultats de la correlation 
+correlation.test
+```
+
+#### Graphique
+```{r}
+# la droite représente la pente de l'effet de VI1.cont sur VD1.cont. La partie grisée autour de la droite représente l'intervalle de confiance à 95%
+ggplot(my_data.correlation, aes(x = VI1.cont, y = VD1.cont)) +
+  geom_point(size = 3, alpha = 0.4) + 
+  geom_smooth(formula = y ~ x, method = "lm") +
+  ylab("VD1.cont") + xlab("VI1.cont") + 
+  theme_bw() + 
+  theme(axis.title.y = element_text(size = 14, hjust = 0.5, face = "bold"), 
+        axis.title.x = element_text(face = "bold", size = 14, hjust = 0.5))
+```
+
+
+#### Interpretation
+```{r,results='asis', echo=FALSE}
+paste0(
+  "La correlation entre les variables VD1.cont et VI.cont est faible et la valeur p de cette association est marginalement significative (r = ", 
+  round(correlation.test$estimate, digits = 3), 
+  ", 95% IC = [",
+  round(correlation.test$conf.int, digits = 3)[1], 
+  ", ",
+  round(correlation.test$conf.int, digits = 3)[2],
+  "], p = ",
+  round(correlation.test$p.value, digits = 3),
+  ")")
+```
+
+### ANOVA multifactorielle
+
+#### Type de variables
+
+**Variable Dépendante :** Numérique <br>
+**Variables Indépendantes :** Catégorielles (2 catégories ou +)<br>
+
+#### Packages nécessaires
+```{r message=FALSE}
+library(ggplot2)
+library(GGally)
+library(dplyr)
+library(emmeans)
+library(car)
+library(forcats)
+library(rstatix)
+```
+
+#### Données réelles 
+```{r eval = FALSE}
+# choisissez la ligne appropriée au format de votre fichier de données. 
+
+# si vos données sont dans un fichier .txt
+my_data.anovafact <- read.delim(file.choose())
+
+# si vos données sont dans un fichier .csv
+my_data.anovafact <- read.csv(file.choose())
+
+# si vos données sont dans un fichier .xls / .xlsx
+my_data.anovafact <- read_excel(file.choose())
+
+# une fois vos données chargées, vous pouvez renommer vos noms de colonnes afin qu'ils correspondent à ceux utilisés dans le code ci-dessous
+# Si vous ne souhaitez pas renommer vos noms de colonnes, sautez cette étape mais adaptez le code des parties suivantes en lui indiquant les noms de colonnes de vos données.
+
+# On crée une nouvelle colonne pour votre variable dépendante continue (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.anovafact$VD1.cont <- my_data.anovafact$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour vos variables indépendantes catégorielles (remplacez 'votre.nom.de.colonne' par les noms appropriés)
+my_data.anovafact$VI1.cat <- my_data.anovafact$'votre.nom.de.colonne'
+my_data.anovafact$VI2.cat <- my_data.anovafact$'votre.nom.de.colonne'
+```
+
+#### Données fictives
+```{r}
+set.seed(4321)
+my_data.anovafact <- data.frame(
+  VD1.cont = c(rnorm(20)-0.5, rnorm(20), rnorm(20)+0.5, rnorm(20)),
+  VI1.cat = rep(c(1, 2), each = 40),
+  VI2.cat = rep(c(1, 2, 1, 2), each = 20))
+
+# On renomme les catégories de VI1.cat et VI2.cat pour que les résultats soient plus lisibles
+my_data.anovafact$VI1.cat <- fct_recode(factor(my_data.anovafact$VI1.cat), 
+                                        "Groupe 1" = "1", 
+                                        "Groupe 2" = "2") 
+
+my_data.anovafact$VI2.cat <- fct_recode(factor(my_data.anovafact$VI2.cat), 
+                                        "Modalite 1" = "1", 
+                                        "Modalite 2" = "2") 
+```
+
+#### Déclaration du type de variables
+```{r}
+my_data.anovafact$VD1.cont <- as.numeric(as.character(my_data.anovafact$VD1.cont))
+my_data.anovafact$VI1.cat <- factor(my_data.anovafact$VI1.cat)
+my_data.anovafact$VI2.cat <- factor(my_data.anovafact$VI2.cat)
+```
+
+#### Inspection des données
+```{r}
+## Les graphiques situés sur la diagonale représentent la distribution des variables
+## Les graphiques (ou les valeurs de corrélation) situés au dessus et en dessous de la diagonale représentent l'association entre les différentes variables
+ggpairs(my_data.anovafact,
+        lower = list(continuous = wrap("smooth", alpha = 0.7), combo = "box_no_facet"),
+        upper = list(combo = "facetdensity", discrete = "facetbar"), 
+        mapping = aes(alpha = 0.8)) + theme_bw()
+```
+
+#### Analyse des données 
+```{r warning=FALSE, message=FALSE}
+# calcul de l'ANOVA et stockage des résultats dans l’objet anovafact.test
+anovafact.test <- lm(formula = VD1.cont ~ VI1.cat*VI2.cat,
+                     contrasts = list(
+                       VI1.cat="contr.sum",
+                       VI2.cat="contr.sum"),
+                     data = my_data.anovafact)
+
+# calcul des moyennes et écarts types pour lchaque modalité de VI.multicat
+description.anovafact <- my_data.anovafact %>% 
+  group_by(VI1.cat, VI2.cat) %>% 
+  summarise(
+    Mean=mean(VD1.cont),
+    SD=sd(VD1.cont),
+    N=n())
+
+# calcul des tests post hoc (comparaison de moyennes deux à deux) sans ajuster la valeur p
+posthoc.anovafact <- emmeans(anovafact.test, consec ~ VI1.cat | VI2.cat, adjust="none")
+
+# calcul de la taille d'effet de VI1.cat et VI2.cat sur VD1.cont (SMD / d de cohen)
+my_data.anovafact$VI.comb <- interaction(my_data.anovafact$VI1.cat, my_data.anovafact$VI2.cat)
+cohensd.anovafact <- rstatix::cohens_d(data = my_data.anovafact,
+                              formula = VD1.cont ~ VI.comb, 
+                              var.equal = TRUE)
+
+# obtention des différentes moyennes/écarts-types 
+description.anovafact
+
+# obtention des résultats de l'anova 
+Anova(anovafact.test, type = 3)
+
+# obtention des tests post hoc 
+posthoc.anovafact
+
+# obtention de la taille d'effet 
+cohensd.anovafact
+```
+
+#### Graphique
+```{r}
+ggplot(my_data.anovafact, aes(x = VI1.cat, y = VD1.cont, fill = VI1.cat)) +
+  geom_boxplot(color="black", outlier.color="red") + 
+  geom_jitter(size = 3, alpha=0.4, width=0.1) +
+  facet_wrap(~VI2.cat) +
+  ylab("VD1.cont") + xlab("VI1.cat") + 
+  theme_bw() + 
+  theme(axis.title.y = element_text(size = 14, hjust = 0.5, face="bold"), 
+        axis.title.x = element_text(face="bold", size = 14, hjust = 0.5)) + 
+  scale_fill_grey(start = 0.9, end = 0.5) +
+  guides(fill = FALSE)
+```
+
+
+#### Interpretation
+```{r,results='asis', echo=FALSE}
+paste0(
+  "L'interaction entre VI1.cat et VI2.cat est significative (F = ",
+  round(tidy(Anova(anovafact.test))$statistic[3], digits = 3),
+  ", p = ",
+  round(tidy(Anova(anovafact.test))$p.value[3], digits = 8),
+  "). ",
+  "La différence entre les scores obtenus par le groupe 1 et le groupe 2 est significative pour la modalité 1 de VI2.cat (moyenne groupe 1 = ", 
+  round(description.anovafact$Mean[1], digits = 3),
+  ", SD groupe 1 = ", 
+  round(description.anovafact$SD[1], digits = 3), 
+  ", N groupe 1 = ", 
+  description.anovafact$N[1], 
+  "; moyenne groupe 2 = ", 
+  round(description.anovafact$Mean[3], digits = 3),
+  ", SD groupe 2 = ", 
+  round(description.anovafact$SD[3], digits = 3), 
+  ", N groupe 2 = ", 
+  description.anovafact$N[3],
+  "; p = ",
+  round(summary(posthoc.anovafact)$contrasts$p.value[1], digits=8),
+  ", d de cohen = ",
+  round(cohensd.anovafact$effsize[1], digits=3),
+  "), mais pas pour la modalité 2 de VI2.cat (M.grp1 = ",
+  round(description.anovafact$Mean[2], digits = 3),
+  ", SD groupe 1 = ", 
+  round(description.anovafact$SD[2], digits = 3), 
+  ", N groupe 1 = ", 
+  description.anovafact$N[2], 
+  "; M groupe 2 = ", 
+  round(description.anovafact$Mean[4], digits = 3),
+  ", SD groupe 2 = ", 
+  round(description.anovafact$SD[4], digits = 3), 
+  ", N groupe 2 = ", 
+  description.anovafact$N[4],
+  "; p = ",
+  round(summary(posthoc.anovafact)$contrasts$p.value[2], digits=3),
+  ", d de cohen = ",
+  round(cohensd.anovafact$effsize[6], digits=3),
+   ")")
+```
+
+### Regression linéaire multiple 1
+
+#### Type de variables
+
+**Variable Dépendante :** Numérique <br>
+**Variables Indépendantes :** Numériques<br>
+
+#### Packages nécessaires
+```{r message=FALSE, warning=FALSE}
+library(ggplot2)
+library(GGally)
+library(rstatix)
+library(dplyr)
+library(effects)
+library(lm.beta)
+```
+
+#### Données réelles 
+```{r eval = FALSE}
+# choisissez la ligne appropriée au format de votre fichier de données. 
+
+# si vos données sont dans un fichier .txt
+my_data.regmult1 <- read.delim(file.choose())
+
+# si vos données sont dans un fichier .csv
+my_data.regmult1 <- read.csv(file.choose())
+
+# si vos données sont dans un fichier .xls / .xlsx
+my_data.regmult1 <- read_excel(file.choose())
+
+# une fois vos données chargées, vous pouvez renommer vos noms de colonnes afin qu'ils correspondent à ceux utilisés dans le code ci-dessous
+# Si vous ne souhaitez pas renommer vos noms de colonnes, sautez cette étape mais adaptez le code des parties suivantes en lui indiquant les noms de colonnes de vos données.
+
+# On crée une nouvelle colonne pour votre variable dépendante continue (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.regmult1$VD1.cont <- my_data.regmult1$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour votre variable indépendante continue (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.regmult1$VI1.cont <- my_data.regmult1$'votre.nom.de.colonne'
+my_data.regmult1$VI2.cont <- my_data.regmult1$'votre.nom.de.colonne'
+```
+
+#### Données fictives
+```{r}
+set.seed(4321)
+regmult1 <- rnorm(50)*3
+my_data.regmult1 <- data.frame(
+  VD1.cont = rnorm(50)*2 + 1*regmult1,
+  VI1.cont = rnorm(50)+ 0.2*regmult1,
+  VI2.cont = rnorm(50))
+```
+
+#### Déclaration du type de variables
+```{r}
+my_data.regmult1$VD1.cont <- as.numeric(as.character(my_data.regmult1$VD1.cont))
+my_data.regmult1$VI1.cont <- as.numeric(as.character(my_data.regmult1$VI1.cont))
+my_data.regmult1$VI2.cont <- as.numeric(as.character(my_data.regmult1$VI2.cont))
+```
+
+#### Inspection des données
+```{r}
+## Les graphiques situés sur la diagonale représentent la distribution des variables
+## Les graphiques (ou les valeurs de corrélation) situés au dessus et en dessous de la diagonale représentent l'association entre les différentes variables
+ggpairs(my_data.regmult1,
+        lower = list(continuous = wrap("smooth", alpha = 0.7), combo = "box_no_facet"),
+        upper = list(combo = "facetdensity", discrete = "facetbar"), 
+        mapping = aes(alpha = 0.8)) + theme_bw()
+```
+
+#### Analyse des données 
+```{r warning=FALSE, message=FALSE}
+# calcul de la régression multiple et stockage des résultats dans l’objet regmult1.test
+regmult1.test <- lm(formula = VD1.cont ~ VI1.cont + VI2.cont, 
+                 data = my_data.regmult1)
+
+# obtention des résultats de la régression linéaire multiple 
+
+## coefficients non-standardisés
+summary(regmult1.test)
+
+## coefficients standardisés
+lm.beta(regmult1.test)
+```
+
+#### Graphique
+```{r}
+# la droite représente la pente de l'effet de VI1.cont ajusté par l'effet de VI2.cat sur VD1.cont. La partie grisée autour de la droite représente l'intervalle de confiance à 95%
+adjusted.slope.regmult1 <- as.data.frame(
+  effect(
+    term = "VI1.cont", 
+    mod = regmult1.test))
+
+ggplot(my_data.regmult1, aes(x = VI1.cont, y = VD1.cont)) +
+  geom_point(size = 3, alpha = 0.4) + 
+  geom_ribbon(data = adjusted.slope.regmult1, 
+              aes(x = VI1.cont, y = fit, ymin = lower, ymax = upper), 
+              fill="grey", alpha  = 0.8) +
+  geom_line(data = adjusted.slope.regmult1, 
+            aes(x = VI1.cont , y = fit), 
+            color = "black", size = 1) +
+  ylab("VD1.cont") + xlab("VI1.cont") + 
+  theme_bw() + 
+  theme(axis.title.y = element_text(size = 14, hjust = 0.5, face="bold"), 
+        axis.title.x = element_text(face="bold", size = 14, hjust = 0.5))
+```
+
+
+#### Interpretation
+```{r,results='asis', echo=FALSE}
+paste0(
+  "VI1.cont est significativement associé à VD1.cont même si l'on ajuste par l'effet de VI2.cont (b = ", 
+  round(summary(regmult1.test)$coefficients[2,1], digits = 3), 
+  ", SE = ",
+  round(summary(regmult1.test)$coefficients[2,2], digits = 3), 
+  ", beta = ",
+  round(lm.beta(regmult1.test)$standardized.coefficients[2], digits = 3),
+  ", p = ",
+  round(summary(regmult1.test)$coefficients[2,4], digits = 3),
+  ", N = ",
+  round(length(regmult1.test$fitted.values)),
+  ")")
+```
+
+### ANCOVA 
+
+ATTENTION : si votre variable indépendante principale est **Numérique** OU que vous faites une hypothèse d'interaction entre votre VI principale catégorielle et une autre covariable, reportez-vous à la section suivante **Régression linéaire multiple 2**.<br>
+Dans le cas contraire (votre VI principale est catégorielle ET vous ne faites pas d'hypothèse d'interaction entre votre VI catégorielle et une covariable), utilisez une ANCOVA décrite dans cette vignette. 
+
+#### Type de variables
+
+**Variable Dépendante :** Numérique <br>
+**Variable indépendante principale:** Catégorielle (2 catégories ou +)<br>
+**Autres variables indépendantes (covariables) :** Numériques / Catégorielles 
+
+#### Packages nécessaires
+```{r message=FALSE}
+library(ggplot2)
+library(GGally)
+library(emmeans)
+library(effects)
+library(car)
+library(forcats)
+library(esc)
+```
+
+#### Données réelles 
+```{r eval = FALSE}
+# choisissez la ligne appropriée au format de votre fichier de données. 
+
+# si vos données sont dans un fichier .txt
+my_data.ancova <- read.delim(file.choose())
+
+# si vos données sont dans un fichier .csv
+my_data.ancova <- read.csv(file.choose())
+
+# si vos données sont dans un fichier .xls / .xlsx
+my_data.ancova <- read_excel(file.choose())
+
+# une fois vos données chargées, vous pouvez renommer vos noms de colonnes afin qu'ils correspondent à ceux utilisés dans le code ci-dessous
+# Si vous ne souhaitez pas renommer vos noms de colonnes, sautez cette étape mais adaptez le code des parties suivantes en lui indiquant les noms de colonnes de vos données.
+
+# On crée une nouvelle colonne pour votre variable dépendante continue (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.ancova$VD1.cont <- my_data.ancova$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour votre variable indépendante catégorielle (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.ancova$VI1.cat <- my_data.ancova$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour votre variable indépendante continue (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.ancova$VI2.cont <- my_data.ancova$'votre.nom.de.colonne'
+```
+
+#### Données fictives
+```{r}
+set.seed(4321)
+ancova <- rnorm(200)
+my_data.ancova <- data.frame(
+  VD1.cont = rnorm(200) + 0.8*ancova,
+  VI1.cat = rep(c(1, 2), each = 100),
+  VI2.cont = c(rnorm(200)+0.8*ancova))
+
+# on renomme les catégories de VI1.cat pour que les résultats soient plus lisibles
+my_data.ancova$VI1.cat <- fct_recode(factor(my_data.ancova$VI1.cat), 
+                                        "Groupe 1" = "1", 
+                                        "Groupe 2" = "2") 
+```
+
+#### Déclaration du type de variables
+```{r}
+my_data.ancova$VD1.cont <- as.numeric(as.character(my_data.ancova$VD1.cont))
+my_data.ancova$VI1.cat <- factor(my_data.ancova$VI1.cat)
+my_data.ancova$VI2.cont <- as.numeric(as.character(my_data.ancova$VI2.cont))
+```
+
+#### Inspection des données
+```{r}
+## Les graphiques situés sur la diagonale représentent la distribution des variables
+## Les graphiques (ou les valeurs de corrélation) situés au dessus et en dessous de la diagonale représentent l'association entre les différentes variables
+ggpairs(my_data.ancova,
+        lower = list(continuous = wrap("smooth", alpha = 0.7), combo = "box_no_facet"),
+        upper = list(combo = "facetdensity", discrete = "facetbar"), 
+        mapping = aes(alpha = 0.8)) + theme_bw()
+```
+
+#### Analyse des données 
+```{r warning=FALSE, message=FALSE}
+# calcul de l'ANCOVA et stockage des résultats dans l’objet ancova.test
+ancova.test <- lm(formula = VD1.cont ~ VI1.cat + VI2.cont,
+                     data = my_data.ancova)
+
+# calcul des moyennes marginales estimées et écarts types pour chaque modalité de VI1.cat
+description.anovafact <- emmeans(ancova.test, ~VI1.cat)
+
+# calcul de la taille d'effet de VI1.cat sur VD1.cont (SMD/d de cohen ajusté par VI2.cont)
+cohensd.ancova <- esc_mean_se(
+  grp1m = summary(description.anovafact)$emmean[1],
+  grp1se = summary(description.anovafact)$SE[1],
+  grp1n = nrow(subset(my_data.ancova, VI1.cat == "Groupe 1")),
+  grp2m = summary(description.anovafact)$emmean[2],
+  grp2se = summary(description.anovafact)$SE[2],
+  grp2n = nrow(subset(my_data.ancova, VI1.cat == "Groupe 2")),
+  es.type = "d")
+
+# obtention des différentes moyennes/écarts-types 
+description.anovafact
+
+# obtention des résultats de l'anova 
+Anova(ancova.test, type = 2)
+
+# obtention des tailles d'effet 
+cohensd.ancova
+```
+
+#### Graphique
+```{r}
+# les barres d'erreurs représentent l'erreur standard.
+adjusted.means.ancova <- as.data.frame(
+  effect(
+    term = "VI1.cat", 
+    mod = ancova.test))
+
+ggplot(adjusted.means.ancova, 
+       aes(x = VI1.cat, y = fit, fill = VI1.cat)) +
+  geom_hline(aes(yintercept = 0)) + 
+  geom_bar(stat = "identity", color = "black", alpha = 0.7) +
+  geom_errorbar(aes(ymin = fit - se, 
+                    ymax = fit + se), 
+                width = .1, col = "black") +
+  ylab("VD1.cont") + xlab("VI1.cat") + 
+  theme_bw() + 
+  theme(axis.title.y = element_text(size = 14, hjust = 0.5, face = "bold"), 
+        axis.title.x = element_text(face = "bold", size = 14, hjust = 0.5)) + 
+  scale_fill_grey(start = 0.9, end = 0.5) +
+  guides(fill = FALSE)
+```
+
+#### Interpretation
+```{r,results='asis', echo=FALSE}
+paste0(
+  "Les scores obtenus par le groupe 1 (moyenne groupe 1 = ", 
+  round(summary(description.anovafact)$emmean[1], digits = 3),
+  ", SE groupe 1 = ", 
+  round(summary(description.anovafact)$SE[1], digits = 3), 
+  ", N groupe 1 = ", 
+  nrow(subset(my_data.ancova, VI1.cat == "Groupe 1")),  
+  ") et le groupe 2 (moyenne groupe 2 = ", 
+  round(summary(description.anovafact)$emmean[2], digits = 3),
+  ", SE groupe 2 = ", 
+  round(summary(description.anovafact)$SE[2], digits = 3), 
+  ", N groupe 2 = ", 
+  nrow(subset(my_data.ancova, VI1.cat == "Groupe 2")),
+  ") diffèrent de façon marginale lorsque la diférence est ajustée par l'effet de VI2.cont (F = ",
+  round(tidy(Anova(ancova.test))$statistic[1], digits = 3),
+  ", p = ",
+  round(tidy(Anova(ancova.test))$p.value[1], digits = 3),
+  ", d de cohen = ",
+  round(cohensd.ancova$es, digits = 3),
+  ")")
+```
+
+### Regression linéaire multiple 2
+
+ATTENTION : si votre variable indépendante principale est **catégorielle** ET que vous ne faites pas d'hypothèse d'interaction entre cette VI principale catégorielle et une autre covariable, reportez-vous à la section précédente **MANCOVA**.<br>
+Dans le cas contraire (votre VI principale est Numérique OU vous faites une hypothèse d'interaction entre votre VI catégorielle et une covariable), utilisez une régression linéaire décrite dans cette vignette. 
+
+
+#### Type de variables
+
+**Variable Dépendante :** Numérique <br>
+**Variable indépendante principale:** Numérique<br>
+**Autres variables indépendantes :** Numériques / Catégorielles
+
+#### Packages nécessaires
+```{r message=FALSE}
+library(ggplot2)
+library(GGally)
+library(rstatix)
+library(dplyr)
+library(effects)
+library(lm.beta)
+```
+
+#### Données réelles 
+```{r eval = FALSE}
+# choisissez la ligne appropriée au format de votre fichier de données. 
+
+# si vos données sont dans un fichier .txt
+my_data.regmult2 <- read.delim(file.choose())
+
+# si vos données sont dans un fichier .csv
+my_data.regmult2 <- read.csv(file.choose())
+
+# si vos données sont dans un fichier .xls / .xlsx
+my_data.regmult2 <- read_excel(file.choose())
+
+# une fois vos données chargées, vous pouvez renommer vos noms de colonnes afin qu'ils correspondent à ceux utilisés dans le code ci-dessous
+# Si vous ne souhaitez pas renommer vos noms de colonnes, sautez cette étape mais adaptez le code des parties suivantes en lui indiquant les noms de colonnes de vos données.
+
+# On crée une nouvelle colonne pour votre variable dépendante continue (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.regmult2$VD1.cont <- my_data.regmult2$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour votre variable indépendante continue (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.regmult2$VI1.cont <- my_data.regmult2$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour votre variable indépendante catégorielle (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.regmult2$VI2.cat <- my_data.regmult2$'votre.nom.de.colonne'
+```
+
+#### Données fictives
+```{r}
+set.seed(4321)
+my_data.regmult2 <- data.frame(
+  VD1.cont = rnorm(150),
+  VI1.cont = rnorm(150),
+  VI2.cat = rbinom(150, 2, 0.4))
+```
+
+#### Déclaration du type de variables
+```{r}
+my_data.regmult2$VD1.cont <- as.numeric(as.character(my_data.regmult2$VD1.cont))
+my_data.regmult2$VI1.cont <- as.numeric(as.character(my_data.regmult2$VI1.cont))
+my_data.regmult2$VI2.cat <- factor(my_data.regmult2$VI2.cat)
+```
+
+#### Inspection des données
+```{r}
+## Les graphiques situés sur la diagonale représentent la distribution des variables
+## Les graphiques (ou les valeurs de corrélation) situés au dessus et en dessous de la diagonale représentent l'association entre les différentes variables
+ggpairs(my_data.regmult2,
+        lower = list(continuous = wrap("smooth", alpha = 0.7), combo = "box_no_facet"),
+        upper = list(combo = "facetdensity", discrete = "facetbar"), 
+        mapping = aes(alpha = 0.8)) + theme_bw()
+```
+
+#### Analyse des données 
+```{r warning=FALSE, message=FALSE}
+# calcul de la régression linéaire multiple et stockage des résultats dans l’objet regmult2.test
+regmult2.test <- lm(formula = VD1.cont ~ VI1.cont + VI2.cat, 
+                 data = my_data.regmult2)
+
+# obtention des résultats de la régression linéaire multiple 
+
+## coefficients non-standardisés
+summary(regmult2.test)
+
+## coefficients standardisés
+lm.beta(regmult2.test)
+```
+
+#### Graphique
+```{r}
+# la droite représente la pente de l'effet de VI1.cont ajusté par l'effet de VI2.cat sur VD1.cont. La partie grisée autour de la droite représente l'intervalle de confiance à 95%
+adjusted.slope.regmult2 <- as.data.frame(
+  effect(
+    term = "VI1.cont", 
+    mod = regmult2.test))
+
+ggplot(my_data.regmult2, aes(x = VI1.cont, y = VD1.cont)) +
+  geom_point(size = 3, alpha = 0.4) + 
+  geom_ribbon(data = adjusted.slope.regmult2, 
+              aes(x = VI1.cont, y = fit, ymin = lower, ymax = upper), 
+              fill = "grey", alpha = 0.8) +
+  geom_line(data = adjusted.slope.regmult2, 
+            aes(x = VI1.cont , y = fit), 
+            color = "black", size = 1) +
+  ylab("VD1.cont") + xlab("VI1.cont") + 
+  theme_bw() + 
+  theme(axis.title.y = element_text(size = 14, hjust = 0.5, face = "bold"), 
+        axis.title.x = element_text(face = "bold", size = 14, hjust = 0.5))
+```
+
+
+#### Interpretation
+```{r,results='asis', echo=FALSE}
+paste0(
+  "VI1.cont n'est pas significativement associée à VD1.cont lorsque l'on ajuste par l'effet de VI2.cat et VI3.cat (b = ", 
+  round(summary(regmult2.test)$coefficients[2,1], digits = 3), 
+  ", SE = ",
+  round(summary(regmult2.test)$coefficients[2,2], digits = 3), 
+  ", beta = ",
+  round(lm.beta(regmult2.test)$standardized.coefficients[2], digits = 3),
+  ", p = ",
+  round(summary(regmult2.test)$coefficients[2,4], digits = 3),
+  ", N = ",
+  round(length(regmult2.test$fitted.values)),
+  ")")
+```
+
+## Une seule VD catégorielle
+
+### Chi-deux 1
+
+#### Type de variables
+
+**Variable Dépendante :** Catégorielle (2 catégories)<br>
+**Variable Indépendante :** Catégorielle (2 catégories ou +) 
+
+#### Packages nécessaires
+```{r message=FALSE}
+library(ggplot2)
+library(GGally)
+library(forcats)
+library(dplyr)
+```
+
+#### Données réelles 
+```{r eval = FALSE}
+# choisissez la ligne appropriée au format de votre fichier de données. 
+
+# si vos données sont dans un fichier .txt
+my_data.chideux1 <- read.delim(file.choose())
+
+# si vos données sont dans un fichier .csv
+my_data.chideux1 <- read.csv(file.choose())
+
+# si vos données sont dans un fichier .xls / .xlsx
+my_data.chideux1 <- read_excel(file.choose())
+
+# une fois vos données chargées, vous pouvez renommer vos noms de colonnes afin qu'ils correspondent à ceux utilisés dans le code ci-dessous
+# Si vous ne souhaitez pas renommer vos noms de colonnes, sautez cette étape mais adaptez le code des parties suivantes en lui indiquant les noms de colonnes de vos données.
+
+# On crée une nouvelle colonne pour votre variable dépendante catégorielle (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.chideux1$VD1.cat <- my_data.chideux1$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour votre variable indépendante catégorielle (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.chideux1$VI1.cat <- my_data.chideux1$'votre.nom.de.colonne'
+```
+
+#### Données fictives
+```{r}
+set.seed(4321)
+my_data.chideux1 <- data.frame(
+  VD1.cat = rbinom(55, 1, 0.5) + 1,
+  VI1.cat = rbinom(55, 1, 0.3) + 1)
+
+# on renomme les catégories de VD1.cat et VI1.cat pour que les résultats soient plus lisibles
+my_data.chideux1$VD1.cat <- fct_recode(factor(my_data.chideux1$VD1.cat), 
+                                    "Positif" = "1", 
+                                    "Negatif" = "2") 
+
+my_data.chideux1$VI1.cat <- fct_recode(factor(my_data.chideux1$VI1.cat), 
+                                    "Groupe 1" = "1", 
+                                    "Groupe 2" = "2") 
+```
+
+#### Déclaration du type de variables
+```{r}
+my_data.chideux1$VD1.cat <- factor(my_data.chideux1$VD1.cat)
+my_data.chideux1$VI1.cat <- factor(my_data.chideux1$VI1.cat)
+```
+
+#### Inspection des données
+```{r}
+## Les graphiques situés sur la diagonale représentent la distribution des variables
+## Les graphiques (ou les valeurs de corrélation) situés au dessus et en dessous de la diagonale représentent l'association entre les différentes variables
+ggpairs(my_data.chideux1,
+        lower = list(continuous = wrap("smooth", alpha = 0.7), combo = "box_no_facet"),
+        upper = list(combo = "facetdensity", discrete = "facetbar"), 
+        mapping = aes(alpha = 0.8)) + theme_bw()
+```
+
+#### Analyse des données 
+```{r warning=FALSE, message=FALSE}
+# on range les données sous forme de table 
+my_table.chideux1 <- with(my_data.chideux1, table(VI1.cat, VD1.cat))
+
+# calcul du test de chi-deux et stockage des résultats dans l’objet chideux1.test
+# la correction de Yates peut être obtenue en indiquant l'argument "correct = TRUE"
+chideux1.test <- chisq.test(my_table.chideux1, correct = FALSE)
+
+# calcul des proportions de VD1.cat dans chaque modalité de VI1.cat
+description.chideux1 <- data.frame(my_table.chideux1) %>%
+    group_by(VI1.cat) %>%
+    summarise(proportion = Freq / sum(Freq),
+              VD1.cat = VD1.cat)
+
+# calcul de la taille d'effet de VI1.cat sur VD1.cat (odds ratio)
+odds.ratio.chideux1 <- (my_table.chideux1[1,1]/my_table.chideux1[1,2])/(my_table.chideux1[2,1]/my_table.chideux1[2,2])
+
+# obtention des résultats tableau de contigence et des proportions  
+my_table.chideux1; description.chideux1
+
+# obtention du test de chi deux 
+chideux1.test
+
+# obtention des tailles d'effet
+odds.ratio.chideux1
+```
+
+#### Graphique
+```{r}
+ggplot(my_data.chideux1, aes(x = factor(VI1.cat), fill = VD1.cat)) + 
+  geom_bar(stat = "count", position = position_dodge2())  +
+  scale_fill_grey(start = 0.8, end = 0.5) +
+  ylab("Nombre de personnes") + xlab("VI1.cat") + 
+  theme_bw() + 
+  theme(axis.title.y = element_text(size = 14, hjust = 0.5, face = "bold"), 
+        axis.title.x = element_text(face = "bold", size = 14, hjust = 0.5))
+```
+
+
+#### Interpretation
+```{r, results='asis', echo=FALSE}
+paste0(
+  "La proportion de cas ayant une modalité de VD1.cat égale à 1 (positif) ne diffère pas statistiquement entre les groupes 1 et 2 (groupe 1 = ", 
+  round(description.chideux1$proportion[1], digits = 3)*100,
+  "%, groupe 2 = ",
+  round(description.chideux1$proportion[3], digits = 3)*100,  
+  "%, X² = ",
+  round(chideux1.test$statistic, digits = 3),
+  ", p = ",
+  round(chideux1.test$p.value, digits = 3),
+  ", Odds Ratio = ",
+  round(odds.ratio.chideux1, digits = 3),
+  ")")
+```
+
+### Régression logistique binaire
+
+#### Type de variables
+
+**Variable Dépendante :** Catégorielle (2 catégories)<br>
+**Variable Indépendante :** Numérique 
+
+#### Packages nécessaires
+```{r message=FALSE}
+library(ggplot2)
+library(GGally)
+library(forcats)
+library(effects)
+library(dplyr)
+```
+
+#### Données réelles 
+```{r eval = FALSE}
+# choisissez la ligne appropriée au format de votre fichier de données. 
+
+# si vos données sont dans un fichier .txt
+my_data.reglog <- read.delim(file.choose())
+
+# si vos données sont dans un fichier .csv
+my_data.reglog <- read.csv(file.choose())
+
+# si vos données sont dans un fichier .xls / .xlsx
+my_data.reglog <- read_excel(file.choose())
+
+# une fois vos données chargées, vous pouvez renommer vos noms de colonnes afin qu'ils correspondent à ceux utilisés dans le code ci-dessous
+# Si vous ne souhaitez pas renommer vos noms de colonnes, sautez cette étape mais adaptez le code des parties suivantes en lui indiquant les noms de colonnes de vos données.
+
+# On crée une nouvelle colonne pour votre variable dépendante catégorielle (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.reglog$VD1.cat <- my_data.reglog$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour votre variable indépendante continue (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.reglog$VI1.cont <- my_data.reglog$'votre.nom.de.colonne'
+```
+
+#### Données fictives
+```{r}
+set.seed(4321)
+my_data.reglog <- data.frame(
+  VD1.cat = rep(c(1, 2), each = 80),
+  VI1.cont = c(rnorm(80) + 0.25, rnorm(80) - 0.25))
+
+# on renomme les catégories de VD1.cat pour que les résultats soient plus lisibles
+my_data.reglog$VD1.cat <- fct_recode(factor(my_data.reglog$VD1.cat), 
+                                    "Positif" = "1", 
+                                    "Negatif" = "2") 
+```
+
+#### Déclaration du type de variables
+```{r}
+my_data.reglog$VD1.cat <- factor(my_data.reglog$VD1.cat)
+my_data.reglog$VI1.cont <- as.numeric(as.character(my_data.reglog$VI1.cont))
+```
+
+#### Inspection des données
+```{r}
+## Les graphiques situés sur la diagonale représentent la distribution des variables
+## Les graphiques (ou les valeurs de corrélation) situés au dessus et en dessous de la diagonale représentent l'association entre les différentes variables
+ggpairs(my_data.reglog,
+        lower = list(continuous = wrap("smooth", alpha = 0.7), combo = "box_no_facet"),
+        upper = list(combo = "facetdensity", discrete = "facetbar"), 
+        mapping = aes(alpha = 0.8)) + theme_bw()
+```
+
+#### Analyse des données 
+```{r warning=FALSE, message=FALSE}
+# calcul de la régression logistique binaire et stockage des résultats dans l’objet reglog.test
+reglog.test <- glm(formula = VD1.cat ~ VI1.cont, 
+                   family= "binomial", 
+                   data = my_data.reglog)
+
+# calcul de la taille d'effet de VD1.cont sur VI1.cat (odds ratio)
+odds.ratio.reglog <- exp(coef(reglog.test))[2]
+
+# obtention des résultats de la régression logistique binaire
+summary(reglog.test)
+
+# obtention de la taille d'effet
+odds.ratio.reglog
+```
+
+#### Graphique
+```{r}
+# la droite représente la pente de l'effet de VI1.cont ajusté sur VD1.cat. La partie grisée autour de la droite représente l'intervalle de confiance à 95%
+
+crude.slope.reglog <- as.data.frame(
+  effect(
+    term = "VI1.cont", 
+    mod = reglog.test, 
+    data = my_data.reglog))
+
+ggplot() + 
+  geom_ribbon(data=crude.slope.reglog, 
+              aes(x=VI1.cont, y=fit, ymin=lower, ymax=upper), fill="grey", alpha=0.8) + 
+  geom_line(data=crude.slope.reglog, 
+            aes(x=VI1.cont, y=fit)) + 
+  ylab("Probabilité que VD1.cat soit négatif") + xlab("VI1.cont") +
+  theme_bw() + 
+  theme(axis.title.y = element_text(size = 14, hjust = 0.5, face="bold"), 
+        axis.title.x = element_text(face="bold", size = 14, hjust = 0.5))
+```
+
+
+#### Interpretation
+```{r, results='asis', echo=FALSE}
+paste0(
+  "Les valeurs de VI1.cont sont liées à celles de VD1.cat: plus la valeur de VI1.cont est élevée, plus la probabilité que VD1.cat soit négatif est faible (b = ", 
+  round(coef(reglog.test)[2], digits = 3),
+  ", SE = ",
+  round(summary(reglog.test)$coefficients[2,2], digits = 3),  
+  ", Odds Ratio = ",
+  round(odds.ratio.reglog, digits = 3),  
+  ", p = ",
+  round(summary(reglog.test)$coefficients[2,4], digits = 6),  
+  ")")
+```
+
+### Régression logistique binaire multiple 1
+
+#### Type de variables
+
+**Variable Dépendante :** Catégorielle (2 catégories)<br>
+**Variables Indépendantes :** Catégorielles (2 catégories ou +)
+
+#### Packages nécessaires
+```{r message=FALSE}
+library(ggplot2)
+library(GGally)
+library(forcats)
+library(dplyr)
+library(car)
+library(emmeans)
+```
+
+#### Données réelles 
+```{r eval = FALSE}
+# choisissez la ligne appropriée au format de votre fichier de données. 
+
+# si vos données sont dans un fichier .txt
+my_data.reglog.mult1 <- read.delim(file.choose())
+
+# si vos données sont dans un fichier .csv
+my_data.reglog.mult1 <- read.csv(file.choose())
+
+# si vos données sont dans un fichier .xls / .xlsx
+my_data.reglog.mult1 <- read_excel(file.choose())
+
+# une fois vos données chargées, vous pouvez renommer vos noms de colonnes afin qu'ils correspondent à ceux utilisés dans le code ci-dessous
+# Si vous ne souhaitez pas renommer vos noms de colonnes, sautez cette étape mais adaptez le code des parties suivantes en lui indiquant les noms de colonnes de vos données.
+
+# On crée une nouvelle colonne pour votre variable dépendante catégorielle (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.reglog.mult1$VD1.cat <- my_data.reglog.mult1$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour vos variables indépendantes catégorielles(remplacez 'votre.nom.de.colonne' par les noms appropriés)
+my_data.reglog.mult1$VI1.cat <- my_data.reglog.mult1$'votre.nom.de.colonne'
+my_data.reglog.mult1$VI2.cat <- my_data.reglog.mult1$'votre.nom.de.colonne'
+```
+
+#### Données fictives
+```{r}
+set.seed(4321)
+my_data.reglog.mult1 <- data.frame(
+  VD1.cat = rbinom(200, 1, 0.5) + 1,
+  VI1.cat = rbinom(200, 1, 0.3) + 1,
+  VI2.cat = rbinom(200, 1, 0.3) + 1)
+
+# On renomme les catégories de VD1.cat, VI1.cat et VI2.cat pour que les résultats soient plus lisibles
+my_data.reglog.mult1$VD1.cat <- fct_recode(factor(my_data.reglog.mult1$VD1.cat), 
+                                    "Positif" = "1", 
+                                    "Negatif" = "2") 
+my_data.reglog.mult1$VI1.cat <- fct_recode(factor(my_data.reglog.mult1$VI1.cat), 
+                                    "Groupe 1" = "1", 
+                                    "Groupe 2" = "2") 
+my_data.reglog.mult1$VI2.cat <- fct_recode(factor(my_data.reglog.mult1$VI2.cat), 
+                                    "Modalite 1" = "1", 
+                                    "Modalite 2" = "2") 
+
+```
+
+#### Déclaration du type de variables
+```{r}
+my_data.reglog.mult1$VD1.cat <- factor(my_data.reglog.mult1$VD1.cat)
+my_data.reglog.mult1$VI1.cat <- factor(my_data.reglog.mult1$VI1.cat)
+my_data.reglog.mult1$VI2.cat <- factor(my_data.reglog.mult1$VI2.cat)
+```
+
+#### Inspection des données
+```{r}
+## Les graphiques situés sur la diagonale représentent la distribution des variables
+## Les graphiques (ou les valeurs de corrélation) situés au dessus et en dessous de la diagonale représentent l'association entre les différentes variables
+ggpairs(my_data.reglog.mult1,
+        lower = list(continuous = wrap("smooth", alpha = 0.7), combo = "box_no_facet"),
+        upper = list(combo = "facetdensity", discrete = "facetbar"), 
+        mapping = aes(alpha = 0.8)) + theme_bw()
+```
+
+#### Analyse des données 
+```{r warning=FALSE, message=FALSE}
+# calcul du test de régression logistique et stockage des résultats dans l’objet reglog.mult1.test
+reglog.mult1.test <- glm(formula = VD1.cat ~ VI1.cat*VI2.cat, 
+                    family = "binomial", 
+                    contrasts = list(
+                      VI1.cat = "contr.sum", 
+                      VI2.cat = "contr.sum"),
+                    data = my_data.reglog.mult1)
+
+# calcul des proportions de VD1.cat dans chaque modalité de VI1.cat et VI2.cat
+description.reglog.mult1 <- my_data.reglog.mult1 %>% 
+    group_by(VI1.cat, VI2.cat, VD1.cat) %>%
+    summarise(N=n()) %>%
+    mutate(proportion = N / sum(N))
+
+# calcul de la taille d'effet de VI1.cat sur VD1.cat au sein de chaque modalité de VI2.cat (odds ratio)
+posthoc.reglog.mult1 <- emmeans(reglog.mult1.test, consec ~ VI1.cat | VI2.cat, type="response")
+
+# obtention des proportions  
+description.reglog.mult1
+
+# obtention des résultats de la régression logistique binaire multiple 
+Anova(reglog.mult1.test, type = 3)
+
+# obtention des tailles d'effet (odds ratio)
+# modalite 1
+summary(posthoc.reglog.mult1)$contrasts$odds.ratio[1]
+# modalite 2
+summary(posthoc.reglog.mult1)$contrasts$odds.ratio[2]
+```
+
+#### Graphique
+```{r}
+ggplot(subset(description.reglog.mult1, VD1.cat == "Positif"), 
+       aes(x = VI1.cat, y = proportion, fill = VI1.cat)) + 
+  geom_bar(stat = "identity", position=position_dodge2()) + 
+  facet_wrap(~VI2.cat) + 
+  scale_fill_grey(start = 0.8, end = 0.5) +
+  ylab("Proportion de personnes ayant\n un score positif") + xlab("VI1.cat") + 
+  theme_bw() + 
+  theme(axis.title.y = element_text(size = 14, hjust = 0.5, face = "bold"), 
+        axis.title.x = element_text(face = "bold", size = 14, hjust = 0.5)) +
+  guides(fill = FALSE)
+```
+
+#### Interpretation
+```{r, results='asis', echo=FALSE}
+paste0(
+  "La différence de proportion de cas positifs entre les groupes ne diffère pas statistiquement entre la modalité 1 (groupe 1 = ", 
+  round(description.reglog.mult1$proportion[1], digits = 3)*100,
+  "%, groupe 2 = ",
+  round(description.reglog.mult1$proportion[5], digits = 3)*100,  
+  "%, Odds Ratio = ",
+  round(summary(posthoc.reglog.mult1)$contrasts$odds.ratio[1], digits = 3),
+  ") et la modalité 2 de VI2.cat (groupe 2 = ", 
+  round(description.reglog.mult1$proportion[3], digits = 3)*100,
+  "%, groupe 2 = ",
+  round(description.reglog.mult1$proportion[7], digits = 3)*100,  
+  "%, Odds Ratio = ",
+  round(summary(posthoc.reglog.mult1)$contrasts$odds.ratio[2], digits = 3),
+  "; X² = ",
+  round(tidy(Anova(reglog.mult1.test, type=3))$statistic[3], digits = 3),
+  ", p = ",
+  round(tidy(Anova(reglog.mult1.test, type=3))$p.value[3], digits = 3),
+  ")")
+```
+
+### Régression logistique binaire multiple 2
+
+#### Type de variables
+
+**Variable Dépendante :** Catégorielle (2 catégories)<br>
+**Variables Indépendantes :** Numériques<br>
+
+#### Packages nécessaires
+```{r message=FALSE}
+library(ggplot2)
+library(GGally)
+library(forcats)
+library(effects)
+```
+
+#### Données réelles 
+```{r eval = FALSE}
+# choisissez la ligne appropriée au format de votre fichier de données. 
+
+# si vos données sont dans un fichier .txt
+my_data.reglog.mult2 <- read.delim(file.choose())
+
+# si vos données sont dans un fichier .csv
+my_data.reglog.mult2 <- read.csv(file.choose())
+
+# si vos données sont dans un fichier .xls / .xlsx
+my_data.reglog.mult2 <- read_excel(file.choose())
+
+# une fois vos données chargées, vous pouvez renommer vos noms de colonnes afin qu'ils correspondent à ceux utilisés dans le code ci-dessous
+# Si vous ne souhaitez pas renommer vos noms de colonnes, sautez cette étape mais adaptez le code des parties suivantes en lui indiquant les noms de colonnes de vos données.
+
+# On crée une nouvelle colonne pour votre variable dépendante catégorielle (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.reglog.mult2$VD1.cat <- my_data.reglog.mult2$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour votre variable indépendante continue (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.reglog.mult2$VI1.cont <- my_data.reglog.mult2$'votre.nom.de.colonne'
+```
+
+#### Données fictives
+```{r}
+set.seed(4321)
+my_data.reglog.mult2 <- data.frame(
+  VD1.cat = rbinom(25, 1, 0.7) + 1,
+  VI1.cont = rnorm(25),
+  VI2.cont = rnorm(25))
+
+# on renomme les catégories de VD1.cat pour que les résultats soient plus lisibles
+my_data.reglog.mult2$VD1.cat <- fct_recode(factor(my_data.reglog.mult2$VD1.cat), 
+                                           "Positif" = "1", 
+                                           "Negatif" = "2") 
+```
+
+#### Déclaration du type de variables
+```{r}
+my_data.reglog.mult2$VD1.cat <- factor(my_data.reglog.mult2$VD1.cat)
+my_data.reglog.mult2$VI1.cont <- as.numeric(as.character(my_data.reglog.mult2$VI1.cont))
+my_data.reglog.mult2$VI2.cont <- as.numeric(as.character(my_data.reglog.mult2$VI2.cont))
+```
+
+#### Inspection des données
+```{r}
+## Les graphiques situés sur la diagonale représentent la distribution des variables
+## Les graphiques (ou les valeurs de corrélation) situés au dessus et en dessous de la diagonale représentent l'association entre les différentes variables
+ggpairs(my_data.reglog.mult2,
+        lower = list(continuous = wrap("smooth", alpha = 0.7), combo = "box_no_facet"),
+        upper = list(combo = "facetdensity", discrete = "facetbar"), 
+        mapping = aes(alpha = 0.8)) + theme_bw()
+```
+
+#### Analyse des données 
+```{r warning=FALSE, message=FALSE}
+# calcul de la régression logistique binaire multiple et stockage des résultats dans l’objet reglog.mult2.test
+reglog.mult2.test <- glm(formula = VD1.cat ~ VI1.cont + VI2.cont, 
+                         family= "binomial", 
+                         data = my_data.reglog.mult2)
+
+# calcul de la taille d'effet de VI1.cont sur VD1.cat (odds ratio ajusté par VI2.cont)
+odds.ratio.reglog.mult2 <- exp(coef(reglog.mult2.test))[2]
+
+# obtention  des résultats de la régression logistique binaire multiple
+summary(reglog.mult2.test)
+
+# obtention de la taille d'effet
+odds.ratio.reglog.mult2
+```
+
+#### Graphique
+```{r}
+# la droite représente la pente de l'effet de VI1.cont ajusté par l'effet de VI2.cont sur VD1.cat. La partie grisée autour de la droite représente l'intervalle de confiance à 95%
+adjusted.slope.reglog.mult2 <- as.data.frame(
+  effect(
+    term = "VI1.cont", 
+    mod = reglog.mult2.test, 
+    data = my_data.reglog.mult2))
+
+ggplot(adjusted.slope.reglog.mult2, aes(x = VI1.cont, y = fit)) + 
+  geom_ribbon( aes(ymin = lower, ymax = upper), fill = "grey", alpha = 0.8) + 
+  geom_line() + 
+  ylab("Probabilité que VD1.cat soit négatif") + xlab("VI1.cont") +
+  theme_bw() + 
+  theme(axis.title.y = element_text(size = 14, hjust = 0.5, face = "bold"), 
+        axis.title.x = element_text(face = "bold", size = 14, hjust = 0.5))
+```
+
+#### Interpretation
+```{r, results='asis', echo=FALSE}
+paste0(
+  "VI1.cont n'est pas lié à VD1.cat lorsque l'on ajuste par l'effet de VI2.cont (b = ", 
+  round(coef(reglog.mult2.test)[2], digits = 3),
+  ", SE = ",
+  round(summary(reglog.mult2.test)$coefficients[2,2], digits = 3),  
+  ", Odds Ratio = ",
+  round(odds.ratio.reglog.mult2, digits = 3),  
+  ", p = ",
+  round(summary(reglog.mult2.test)$coefficients[2,4], digits = 6),  
+  ")")
+```
+
+
+### Régression logistique binaire multiple 3
+
+#### Type de variables
+
+**Variable Dépendante :** Catégorielle (2 catégories)<br>
+**Variables Indépendantes :** Numériques / Catégorielles
+
+#### Packages nécessaires
+```{r message=FALSE}
+library(ggplot2)
+library(GGally)
+library(forcats)
+library(effects)
+```
+
+#### Données réelles 
+```{r eval = FALSE}
+# choisissez la ligne appropriée au format de votre fichier de données. 
+
+# si vos données sont dans un fichier .txt
+my_data.reglog.mult3 <- read.delim(file.choose())
+
+# si vos données sont dans un fichier .csv
+my_data.reglog.mult3 <- read.csv(file.choose())
+
+# si vos données sont dans un fichier .xls / .xlsx
+my_data.reglog.mult3 <- read_excel(file.choose())
+
+# une fois vos données chargées, vous pouvez renommer vos noms de colonnes afin qu'ils correspondent à ceux utilisés dans le code ci-dessous
+# Si vous ne souhaitez pas renommer vos noms de colonnes, sautez cette étape mais adaptez le code des parties suivantes en lui indiquant les noms de colonnes de vos données.
+
+# On crée une nouvelle colonne pour votre variable dépendante continue (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.reglog.mult3$VD1.cat <- my_data.reglog.mult3$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour vos variables indépendantes continues (remplacez 'votre.nom.de.colonne' par les noms appropriés)
+my_data.reglog.mult3$VI1.cont <- my_data.reglog.mult3$'votre.nom.de.colonne'
+my_data.reglog.mult3$VI3.cont <- my_data.reglog.mult3$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour votre variable indépendante catégorielle (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.reglog.mult3$VI2.cat <- my_data.reglog.mult3$'votre.nom.de.colonne'
+```
+
+#### Données fictives
+```{r}
+set.seed(4321)
+my_data.reglog.mult3 <- data.frame(
+  VD1.cat = rep(c(1,2), each = 150),
+  VI1.cont = c(rnorm(150) + 0.2, rnorm(150) - 0.2),
+  VI2.cat = rbinom(300, 1, 0.4) + 1,
+  VI3.cont = rnorm(300))
+
+# on renomme les catégories de VD1.cat et VI2.cat pour que les résultats soient plus lisibles
+my_data.reglog.mult3$VD1.cat <- fct_recode(factor(my_data.reglog.mult3$VD1.cat), 
+                                           "Positif" = "1", 
+                                           "Negatif" = "2") 
+my_data.reglog.mult3$VI2.cat <- fct_recode(factor(my_data.reglog.mult3$VI2.cat), 
+                                           "Modalite 1" = "1", 
+                                           "Modalite 2" = "2") 
+```
+
+#### Déclaration du type de variables
+```{r}
+my_data.reglog.mult3$VD1.cat <- factor(my_data.reglog.mult3$VD1.cat)
+my_data.reglog.mult3$VI1.cont <- as.numeric(as.character(my_data.reglog.mult3$VI1.cont))
+my_data.reglog.mult3$VI2.cat <- factor(my_data.reglog.mult3$VI2.cat)
+my_data.reglog.mult3$VI3.cont <- as.numeric(as.character(my_data.reglog.mult3$VI3.cont))
+```
+
+#### Inspection des données
+```{r}
+## Les graphiques situés sur la diagonale représentent la distribution des variables
+## Les graphiques (ou les valeurs de corrélation) situés au dessus et en dessous de la diagonale représentent l'association entre les différentes variables
+ggpairs(my_data.reglog.mult3,
+        lower = list(continuous = wrap("smooth", alpha = 0.7), combo = "box_no_facet"),
+        upper = list(combo = "facetdensity", discrete = "facetbar"), 
+        mapping = aes(alpha = 0.8)) + theme_bw()
+```
+
+#### Analyse des données 
+```{r warning=FALSE, message=FALSE}
+# calcul de la régression logistique binaire multiple et stockage des résultats dans l’objet reglog.mult3.test
+reglog.mult3.test <- glm(formula = VD1.cat ~ VI1.cont + VI2.cat + VI3.cont, 
+                         family= "binomial", 
+                         data = my_data.reglog.mult3)
+
+
+# calcul de la taille d'effet de VI1.cont sur VD1. cat (odds ratio ajusté par VI2.cat et VI3.cont)
+odds.ratio.reglog.mult3 <- exp(coef(reglog.mult3.test))[2]
+
+# obtention des résultats de la régression logistique binaire multiple
+summary(reglog.mult3.test)
+
+# obtention de la taille d'effet
+odds.ratio.reglog.mult3
+```
+
+#### Graphique
+```{r}
+# la droite représente la pente de l'effet de VI1.cont ajusté par l'effet de VI2.cat et VI3.cont sur VD1.cat. La partie grisée autour de la droite représente l'intervalle de confiance à 95%
+adjusted.slope.reglog.mult3 <- as.data.frame(
+  effect(
+    term = "VI1.cont", 
+    mod = reglog.mult3.test, 
+    data = my_data.reglog.mult3))
+
+ggplot(adjusted.slope.reglog.mult3, aes(x = VI1.cont, y = fit)) + 
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "grey", alpha = 0.8) + 
+  geom_line(aes(x = VI1.cont, y = fit)) + 
+  ylab("Probabilité que VD1.cat soit négatif") + xlab("VI1.cont") +
+  theme_bw() + 
+  theme(axis.title.y = element_text(size = 14, hjust = 0.5, face = "bold"), 
+        axis.title.x = element_text(face = "bold", size = 14, hjust = 0.5))
+```
+
+#### Interpretation
+```{r, results='asis', echo=FALSE}
+paste0(
+  "VI1.cont est lié à VD1.cat lorsque l'on ajuste par l'effet de VI2.cat et VI3.cont: plus VI1.cont est elevé et plus la probabilité que VD1.cat soit négatif est faible (b = ", 
+  round(coef(reglog.mult3.test)[2], digits = 3),
+  ", SE = ",
+  round(summary(reglog.mult3.test)$coefficients[2,2], digits = 3),  
+  ", Odds Ratio = ",
+  round(odds.ratio.reglog.mult3, digits = 3),  
+  ", p = ",
+  round(summary(reglog.mult3.test)$coefficients[2,4], digits = 6),  
+  ")")
+```
+
+### Chi-deux 2
+
+#### Type de variables
+
+**Variable Dépendante :** Catégorielle (3 catégories ou +)<br>
+**Variable Indépendante :** Catégorielle (2 catégories ou +) 
+
+#### Packages nécessaires
+```{r message=FALSE}
+library(ggplot2)
+library(GGally)
+library(forcats)
+library(dplyr)
+library(rcompanion)
+```
+
+#### Données réelles 
+```{r eval = FALSE}
+# choisissez la ligne appropriée au format de votre fichier de données. 
+
+# si vos données sont dans un fichier .txt
+my_data.chideux2 <- read.delim(file.choose())
+
+# si vos données sont dans un fichier .csv
+my_data.chideux2 <- read.csv(file.choose())
+
+# si vos données sont dans un fichier .xls / .xlsx
+my_data.chideux2 <- read_excel(file.choose())
+
+# une fois vos données chargées, vous pouvez renommer vos noms de colonnes afin qu'ils correspondent à ceux utilisés dans le code ci-dessous
+# Si vous ne souhaitez pas renommer vos noms de colonnes, sautez cette étape mais adaptez le code des parties suivantes en lui indiquant les noms de colonnes de vos données.
+
+# On crée une nouvelle colonne pour votre variable dépendante catégorielle (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.chideux2$VD1.cat <- my_data.chideux2$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour votre variable indépendante catégorielle (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.chideux2$VI1.multicat <- my_data.chideux2$'votre.nom.de.colonne'
+```
+
+#### Données fictives
+```{r}
+set.seed(4321)
+my_data.chideux2 <- data.frame(
+  VD1.cat = rbinom(80, 1, 0.5) + 1,
+  VI1.multicat = rbinom(80, 2, 0.5) + 1)
+
+# on renomme les catégories de VD1.cat et VI1.cat pour que les résultats soient plus lisibles
+my_data.chideux2$VD1.cat <- fct_recode(factor(my_data.chideux2$VD1.cat), 
+                                    "Positif" = "1", 
+                                    "Negatif" = "2") 
+
+my_data.chideux2$VI1.multicat <- fct_recode(factor(my_data.chideux2$VI1.multicat), 
+                                    "Groupe 1" = "1", 
+                                    "Groupe 2" = "2",
+                                    "Groupe 3" = "3") 
+```
+
+#### Déclaration du type de variables
+```{r}
+my_data.chideux2$VD1.cat <- factor(my_data.chideux2$VD1.cat)
+my_data.chideux2$VI1.multicat <- factor(my_data.chideux2$VI1.multicat)
+```
+
+#### Inspection des données
+```{r}
+## Les graphiques situés sur la diagonale représentent la distribution des variables
+## Les graphiques (ou les valeurs de corrélation) situés au dessus et en dessous de la diagonale représentent l'association entre les différentes variables
+ggpairs(my_data.chideux2,
+        lower = list(continuous = wrap("smooth", alpha = 0.7), combo = "box_no_facet"),
+        upper = list(combo = "facetdensity", discrete = "facetbar"), 
+        mapping = aes(alpha = 0.8)) + theme_bw()
+```
+
+#### Analyse des données 
+```{r warning=FALSE, message=FALSE}
+# on range les données sous forme de table 
+my_table.chideux2 <- with(my_data.chideux2, table(VI1.multicat, VD1.cat))
+
+# calcul du test de chi-deux et stockage des résultats dans l’objet chideux2.test
+# la correction de Yates peut être obtenue en indiquant l'argument "correct = TRUE"
+chideux2.test <- chisq.test(my_table.chideux2, correct = FALSE)
+
+# calcul des proportions de VD1.cat dans chaque modalité de VI1.cat
+description.chideux2 <- data.frame(my_table.chideux2) %>%
+    group_by(VI1.multicat) %>%
+    summarise(proportion = Freq / sum(Freq),
+              VD1.cat = VD1.cat)
+# tests post hoc comparant toutes les modalités de VI1.multicat entre elles (sans correction de yates mais en corrigeant la p-value ajustée avec une méthode de bonferroni)
+posthoc.chideux2 <- pairwiseNominalIndependence(my_table.chideux2,
+                            fisher = FALSE,
+                            gtest = FALSE,
+                            correct = "none",
+                            method = "bonferroni")
+
+# calcul de la taille d'effet de VI1.multicat sur VD1.cat (odds ratio comparant le groupe 1 au groupe 2, le groupe 1 au groupe 3 et le groupe 2 au groupe 3)
+odds.ratio.chideux2.grp1.grp2 <- (my_table.chideux2[1,1]/my_table.chideux2[1,2])/(my_table.chideux2[2,1]/my_table.chideux2[2,2])
+odds.ratio.chideux2.grp1.grp3 <- (my_table.chideux2[1,1]/my_table.chideux2[1,2])/(my_table.chideux2[3,1]/my_table.chideux2[3,2])
+odds.ratio.chideux2.grp2.grp3 <- (my_table.chideux2[2,1]/my_table.chideux2[2,2])/(my_table.chideux2[3,1]/my_table.chideux2[3,2])
+
+# obtention des résultats tableau de contigence et des proportions  
+my_table.chideux2; description.chideux2
+
+# obtention du test de chi deux 
+chideux2.test
+
+# obtention des tests post hoc 
+posthoc.chideux2
+
+# obtention des tailles d'effet
+odds.ratio.chideux2.grp1.grp2; odds.ratio.chideux2.grp1.grp3; odds.ratio.chideux2.grp2.grp3
+```
+
+#### Graphique
+```{r}
+ggplot(my_data.chideux2, aes(x = factor(VI1.multicat), fill = VD1.cat)) + 
+  geom_bar(stat = "count", position = position_dodge2())  +
+  scale_fill_grey(start = 0.8, end = 0.5) +
+  ylab("Nombre de personnes") + xlab("VI1.cat") + 
+  theme_bw() + 
+  theme(axis.title.y = element_text(size = 14, hjust = 0.5, face = "bold"), 
+        axis.title.x = element_text(face = "bold", size = 14, hjust = 0.5))
+```
+
+
+#### Interpretation
+```{r, results='asis', echo=FALSE}
+paste0(
+  "La proportion de cas ayant une modalité de VD1.cat égale à 1 (positif) ne diffère pas statistiquement entre les groupes 1, 2 et 3 (X² = ",
+  round(chideux2.test$statistic, digits = 3),
+  ", p = ",
+  round(chideux2.test$p.value, digits = 3),
+  "). Plus précisément, ni la différence entre les groupes 1 et 2 (odds ratio = ",
+  round(odds.ratio.chideux2.grp1.grp2, digits = 3), 
+  ", p non ajusté = ",
+  round(posthoc.chideux2$p.Chisq[1], digits = 3), 
+  "), ni la différence entre les groupes 1 et 3 (odds ratio = ",
+  round(odds.ratio.chideux2.grp1.grp3, digits = 3), 
+  ", p non ajusté = ",
+  round(posthoc.chideux2$p.Chisq[2], digits = 3),
+  "), ni la différence entre les groupes 2 et 3 (odds ratio = ",
+  round(odds.ratio.chideux2.grp2.grp3, digits = 3), 
+  ", p non ajusté = ",
+  round(posthoc.chideux2$p.Chisq[3], digits = 3), 
+  "), n'atteint la significativité.")
+```
+
+### Régression logistique multinomiale 1
+
+#### Type de variables
+
+**Variable Dépendante :** Catégorielle (3 catégories ou +)<br>
+**Variable Indépendante :** Numérique 
+
+#### Packages nécessaires
+```{r message=FALSE}
+library(ggplot2)
+library(GGally)
+library(forcats)
+library(car)
+library(emmeans)
+library(nnet)
+library(tidyr)
+```
+
+#### Données réelles 
+```{r eval = FALSE}
+# choisissez la ligne appropriée au format de votre fichier de données. 
+
+# si vos données sont dans un fichier .txt
+my_data.regmultinom1 <- read.delim(file.choose())
+
+# si vos données sont dans un fichier .csv
+my_data.regmultinom1 <- read.csv(file.choose())
+
+# si vos données sont dans un fichier .xls / .xlsx
+my_data.regmultinom1 <- read_excel(file.choose())
+
+# une fois vos données chargées, vous pouvez renommer vos noms de colonnes afin qu'ils correspondent à ceux utilisés dans le code ci-dessous
+# Si vous ne souhaitez pas renommer vos noms de colonnes, sautez cette étape mais adaptez le code des parties suivantes en lui indiquant les noms de colonnes de vos données.
+
+# On crée une nouvelle colonne pour votre variable dépendante multicatégorielle (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.regmultinom1$VD1.multicat <- my_data.regmultinom1$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour votre variable indépendante continue (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.regmultinom1$VI1.cont <- my_data.regmultinom1$'votre.nom.de.colonne'
+```
+
+#### Données fictives
+```{r}
+set.seed(4321)
+my_data.regmultinom1 <- data.frame(
+  VD1.multicat = rep(c(1, 2, 3), each=100),
+  VI1.cont = c(rnorm(100) - 0.25, rnorm(100), rnorm(100) + 0.25))
+
+# on renomme les catégories de VD1.cat pour que les résultats soient plus lisibles
+my_data.regmultinom1$VD1.multicat <- fct_recode(factor(my_data.regmultinom1$VD1.multicat), 
+                                            "Categorie 1" = "1", 
+                                            "Categorie 2" = "2",
+                                            "Categorie 3" = "3") 
+```
+
+#### Déclaration du type de variables
+```{r}
+my_data.regmultinom1$VD1.multicat <- factor(my_data.regmultinom1$VD1.multicat)
+my_data.regmultinom1$VI1.cont <- as.numeric(as.character(my_data.regmultinom1$VI1.cont))
+```
+
+#### Inspection des données
+```{r}
+## Les graphiques situés sur la diagonale représentent la distribution des variables
+## Les graphiques (ou les valeurs de corrélation) situés au dessus et en dessous de la diagonale représentent l'association entre les différentes variables
+ggpairs(my_data.regmultinom1,
+        lower = list(continuous = wrap("smooth", alpha = 0.7), combo = "box_no_facet"),
+        upper = list(combo = "facetdensity", discrete = "facetbar"), 
+        mapping = aes(alpha = 0.8)) + theme_bw()
+```
+
+#### Analyse des données 
+```{r warning=FALSE, message=FALSE}
+# calcul de la régression logistique multinomiale et stockage des résultats dans l’objet regmultinom1.test
+regmultinom1.test <- multinom(formula = VD1.multicat ~ VI1.cont, 
+                              data = my_data.regmultinom1)
+X2.regmultinom1 <- as.numeric(as.character(Anova(regmultinom1.test)$'LR Chisq'))
+p.regmultinom1 <- as.numeric(as.character(Anova(regmultinom1.test)$'Pr(>Chisq)'))
+
+# tests post hoc explorant l'effet de VD1.cont sur chaque modalité de VD1.multicat
+posthoc.regmultinom1 <- emtrends(regmultinom1.test, 
+                                 var = "VI1.cont", ~ VD1.multicat)
+
+
+# tailles d'effet de VI1.cont sur VD1.multicat (odds ratio comparant l'effet de VI1.cont sur VD1.multicat entre les groupes 1 et 2 puis entre les groupes 1 et 3)
+odds.ratio.regmultinom1 <- exp(coef(summary(regmultinom1.test)))
+
+# Obtention des résultats de la régression logistique multinomiale évaluant l'effet global de VI1.cont sur VD1.cat 
+data.frame(cbind(
+  Variable = "VI1.cont", 
+  "X2" = X2.regmultinom1,
+  "p" = p.regmultinom1))
+
+# obtention des tests post hoc :
+
+## explorant l'effet de VD1.cont sur chaque modalité de VD1.multicat
+test(posthoc.regmultinom1, adjust = "mvt")
+
+##comparant l'effet de VI1.cont entre chaque modalité de VD1.multicat
+pairs(posthoc.regmultinom1)
+
+# des tailles d'effet
+odds.ratio.regmultinom1
+```
+
+#### Graphique
+```{r}
+crude.slope.regmultinom1 <- as.data.frame(
+  effect(
+    term = "VI1.cont", 
+    mod = regmultinom1.test))
+
+crude.slope.regmultinom1.long <-crude.slope.regmultinom1 %>% 
+    dplyr::select(VI1.cont, 
+                  prob.Categorie.1, 
+                  prob.Categorie.2,
+                  prob.Categorie.3) %>%
+    pivot_longer(-VI1.cont, 
+        names_to="var",
+        values_to="VD")
+
+crude.slope.regmultinom1.long$var<- fct_recode(crude.slope.regmultinom1.long$var, 
+           "Categorie 1" = "prob.Categorie.1", 
+           "Categorie 2" = "prob.Categorie.2",
+           "Categorie 3" = "prob.Categorie.3")
+
+
+ggplot(crude.slope.regmultinom1.long) + 
+  geom_line(aes(x = VI1.cont, y = VD, color = var),  size = 1) + 
+  facet_wrap(~var) +
+  ylab("Probabilité") + 
+  xlab("VI1.cont") +
+  theme_bw() + 
+  theme(axis.title.y = element_text(size = 14, hjust = 0.5, face="bold"), 
+        axis.title.x = element_text(face="bold", size = 14, hjust = 0.5)) +
+  guides(color=FALSE) 
+```
+
+#### Interpretation
+```{r, results='asis', echo=FALSE}
+paste0(
+  "Les valeurs de VI1.cont sont liées à celles de VD1.multicat (X² = ", 
+  round(X2.regmultinom1, digits = 3),
+  ", p = ",
+  round(p.regmultinom1, digits = 5), 
+  "). Plus précisement, plus VI1.cont est élevée et plus la probabilité de Catégorie 3 augmente (valeur p ajustée = ",
+  round(test(posthoc.regmultinom1, adjust = "mvt")$p.value[3], digits = 3),
+  "). En revanche, aucun lien statistiquement significatif entre VI1.cont et les catégories 1 et 2 de VD1.multicat (toutes valeurs p ajustées > ",
+  round(min(test(posthoc.regmultinom1, adjust = "mvt")$p.value[1:2]), digits = 3),
+  "). Ces différences entre les catégories 1 et 2 vs. catégorie 3 sont significatives ou marginalement significatives (toutes valeurs p ajustées < ",
+  round(max(summary(pairs(posthoc.regmultinom1))$p.value[2:3]), digits = 3),
+  ")")
+```
+
+### Régression logistique multinomiale 2
+
+#### Type de variables
+
+**Variable Dépendante :** Catégorielle (3 catégories ou +)<br>
+**Variables Indépendantes :** Catégorielles (2 catégories ou +) 
+
+#### Packages nécessaires
+```{r message=FALSE}
+library(ggplot2)
+library(GGally)
+library(forcats)
+library(dplyr)
+library(emmeans)
+library(broom)
+library(nnet)
+library(car)
+```
+#### Données réelles 
+```{r eval = FALSE}
+# choisissez la ligne appropriée au format de votre fichier de données. 
+
+# si vos données sont dans un fichier .txt
+my_data.regmultinom2 <- read.delim(file.choose())
+
+# si vos données sont dans un fichier .csv
+my_data.regmultinom2 <- read.csv(file.choose())
+
+# si vos données sont dans un fichier .xls / .xlsx
+my_data.regmultinom2 <- read_excel(file.choose())
+
+# une fois vos données chargées, vous pouvez renommer vos noms de colonnes afin qu'ils correspondent à ceux utilisés dans le code ci-dessous
+# Si vous ne souhaitez pas renommer vos noms de colonnes, sautez cette étape mais adaptez le code des parties suivantes en lui indiquant les noms de colonnes de vos données.
+
+# On crée une nouvelle colonne pour votre variable dépendante multicatégorielle (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.regmultinom2$VD1.multicat <- my_data.regmultinom2$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour vos variables indépendantes catégorielles (remplacez 'votre.nom.de.colonne' par les noms appropriés)
+my_data.regmultinom2$VI1.multicat <- my_data.regmultinom2$'votre.nom.de.colonne'
+my_data.regmultinom2$VI2.cat <- my_data.regmultinom2$'votre.nom.de.colonne'
+```
+
+
+#### Données fictives
+```{r}
+set.seed(4321)
+multinom2 <- rbinom(300, 1, 0.8)
+my_data.multinom2 <- data.frame(
+  VD1.multicat = (rbinom(300, 2, 0.5)*multinom2 + 1),
+  VI1.multicat = (rbinom(300, 2, 0.5)*multinom2 + 1),
+  VI2.cat = (rbinom(300, 1, 0.6) + 1))
+
+
+# on renomme les catégories de VD1.multicat, VI1.multicat et VI2.cat pour que les résultats soient plus lisibles
+my_data.multinom2$VD1.multicat <- fct_recode(factor(my_data.multinom2$VD1.multicat), 
+                                    "Categorie 1" = "1", 
+                                    "Categorie 2" = "2",
+                                    "Categorie 3" = "3") 
+
+my_data.multinom2$VI1.multicat <- fct_recode(factor(my_data.multinom2$VI1.multicat), 
+                                    "Groupe 1" = "1", 
+                                    "Groupe 2" = "2",
+                                    "Groupe 3" = "3") 
+
+my_data.multinom2$VI2.cat <- fct_recode(factor(my_data.multinom2$VI2.cat), 
+                                    "Caracteristique 1" = "1", 
+                                    "Caracteristique 2" = "2")
+```
+
+#### Déclaration du type de variables
+```{r}
+my_data.multinom2$VD1.multicat <- factor(my_data.multinom2$VD1.multicat)
+my_data.multinom2$VI1.multicat <- factor(my_data.multinom2$VI1.multicat)
+my_data.multinom2$VI2.cat <- factor(my_data.multinom2$VI2.cat)
+```
+
+#### Inspection des données
+```{r}
+## Les graphiques situés sur la diagonale représentent la distribution des variables
+## Les graphiques (ou les valeurs de corrélation) situés au dessus et en dessous de la diagonale représentent l'association entre les différentes variables
+ggpairs(my_data.multinom2,
+        lower = list(continuous = wrap("smooth", alpha = 0.7), combo = "box_no_facet"),
+        upper = list(combo = "facetdensity", discrete = "facetbar"), 
+        mapping = aes(alpha = 0.8)) + theme_bw()
+```
+
+#### Analyse des données 
+```{r warning=FALSE, message=FALSE}
+# calcul du test de log-linéaire  et stockage des résultats dans l’objet multinom2.test
+regmultinom2.test <- multinom(formula = VD1.multicat  ~ VI1.multicat + VI2.cat, 
+                    data = my_data.multinom2)
+X2.regmultinom2 <- as.numeric(as.character(Anova(regmultinom2.test)$'LR Chisq'))
+p.regmultinom2 <- as.numeric(as.character(Anova(regmultinom2.test)$'Pr(>Chisq)'))
+
+# calcul des proportions de VD1.cat dans chaque modalité de VI1.cat
+description.multinom2 <- my_data.multinom2 %>% 
+  group_by(VI1.multicat, VD1.multicat) %>%
+  summarise(N = n()) %>%
+  mutate(proportion = N / sum(N))
+
+# tailles d'effet de VI1.cont sur VD1.multicat (odds ratio comparant l'effet de VI1.cont sur VD1.multicat entre les groupes 1 et 2 puis entre les groupes 1 et 3)
+odds.ratio.regmultinom2 <- exp(coef(summary(regmultinom2.test)))
+
+posthoc.regmultinom2 <- emmeans(regmultinom2.test, pairwise~VD1.multicat|VI1.multicat)
+
+# Obtention des résultats de la régression logistique multinomiale évaluant l'effet global de VI1.cont sur VD1.cat 
+data.frame(cbind(
+  Variable = "VI1.multicat", 
+  "X2" = X2.regmultinom2,
+  "p" = p.regmultinom2))
+
+# obtention du tableau de contigence et des proportions  
+description.multinom2
+
+# Obtention des résultats du test de régression multinomiale
+Anova(regmultinom2.test)
+
+# obtention des tests post hoc 
+posthoc.regmultinom2
+
+# obtention de la tailel d'effet
+odds.ratio.regmultinom2
+```
+
+#### Graphique
+```{r}
+ggplot(description.multinom2, 
+       aes(x = VI1.multicat, y=proportion, fill = VD1.multicat)) + 
+  geom_bar(stat = "identity", position = position_dodge2(preserve = "single")) + 
+  scale_fill_grey(start = 0.8, end = 0.4) +
+  ylab("Proportion") + xlab("VI1.multicat") + 
+  theme_bw() + 
+  theme(axis.title.y = element_text(size = 14, hjust = 0.5, face ="bold"), 
+        axis.title.x = element_text(face ="bold", size = 14, hjust = 0.5))
+```
+
+#### Interpretation
+```{r, results='asis', echo=FALSE}
+paste0(
+  "L'effet principal de VI1.multicat sur VD1.multicat atteint la significativite malgré l'ajustement par l'effet de VI2.cat  (X² = ", 
+  round(X2.regmultinom2[1], digits = 3),
+  ", p = ",
+  round(p.regmultinom2[1], digits = 9),
+  "). Au sein du groupe 1, la proportions d'individus en Catégorie 1 est plus élevée que la proportion d'individus en Catégorie 2 (p = ",
+  round(summary(posthoc.regmultinom2)$contrasts$p.value[1], digits = 5),
+  "), elle-même marginalement plus élevée que la proportion d'individus en Catégorie 3 (p = ",
+  round(summary(posthoc.regmultinom2)$contrasts$p.value[3], digits = 3),
+  "). En revanche, au sein du groupe 2, seul le nombre d'individus en Catégorie 2 est plus élevé que le nombre d'individus en Catégorie 1 (p = ",
+  round(summary(posthoc.regmultinom2)$contrasts$p.value[4], digits = 3),
+  "). Pour le groupe 3 aucune différence significative n'était retrouvée (toutes valeurs p ajustées = ",
+  min(round(summary(posthoc.regmultinom2)$contrasts$p.value[7:9], digits = 3)),
+  ").")
+```
+
+### Régression logistique multinomiale 3
+
+#### Type de variables
+
+**Variable Dépendante :** Catégorielle (3 catégories ou +)<br>
+**Variables Indépendantes :** Numériques 
+
+#### Packages nécessaires
+```{r message=FALSE}
+library(ggplot2)
+library(GGally)
+library(effects)
+library(forcats)
+library(car)
+library(nnet)
+library(tidyr)
+```
+#### Données réelles 
+```{r eval = FALSE}
+# choisissez la ligne appropriée au format de votre fichier de données. 
+
+# si vos données sont dans un fichier .txt
+my_data.regmultinom3 <- read.delim(file.choose())
+
+# si vos données sont dans un fichier .csv
+my_data.regmultinom3 <- read.csv(file.choose())
+
+# si vos données sont dans un fichier .xls / .xlsx
+my_data.regmultinom3 <- read_excel(file.choose())
+
+# une fois vos données chargées, vous pouvez renommer vos noms de colonnes afin qu'ils correspondent à ceux utilisés dans le code ci-dessous
+# Si vous ne souhaitez pas renommer vos noms de colonnes, sautez cette étape mais adaptez le code des parties suivantes en lui indiquant les noms de colonnes de vos données.
+
+# On crée une nouvelle colonne pour votre variable dépendante multicatégorielle (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.regmultinom3$VD1.multicat <- my_data.regmultinom3$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour vos variables indépendantes continues (remplacez 'votre.nom.de.colonne' par les noms appropriés)
+my_data.regmultinom3$VI1.cont <- my_data.regmultinom3$'votre.nom.de.colonne'
+my_data.regmultinom3$VI2.cont <- my_data.regmultinom3$'votre.nom.de.colonne'
+```
+
+#### Données fictives
+```{r}
+set.seed(4321)
+my_data.regmultinom3 <- data.frame(
+  VD1.multicat = rbinom(330, 2, 0.5) + 1,
+  VI1.cont = rnorm(330),
+  VI2.cont = rnorm(330))
+
+# On renomme les catégories de VD1.multicat pour que les résultats soient plus lisibles
+my_data.regmultinom3$VD1.multicat <- fct_recode(factor(my_data.regmultinom3$VD1.multicat), 
+                                            "Categorie 1" = "1", 
+                                            "Categorie 2" = "2",
+                                            "Categorie 3" = "3") 
+```
+
+#### Déclaration du type de variables
+```{r}
+my_data.regmultinom3$VD1.multicat <- factor(my_data.regmultinom3$VD1.multicat)
+my_data.regmultinom3$VI1.cont <- as.numeric(as.character(my_data.regmultinom3$VI1.cont))
+my_data.regmultinom3$VI2.cont <- as.numeric(as.character(my_data.regmultinom3$VI2.cont))
+```
+
+#### Inspection des données
+```{r}
+## Les graphiques situés sur la diagonale représentent la distribution des variables
+## Les graphiques (ou les valeurs de corrélation) situés au dessus et en dessous de la diagonale représentent l'association entre les différentes variables
+ggpairs(my_data.regmultinom3,
+        lower = list(continuous = wrap("smooth", alpha = 0.7), combo = "box_no_facet"),
+        upper = list(combo = "facetdensity", discrete = "facetbar"), 
+        mapping = aes(alpha = 0.8)) + theme_bw()
+```
+
+#### Analyse des données 
+```{r warning=FALSE, message=FALSE}
+# calcul de la régression logistique multinomiale et stockage des résultats dans l’objet regmultinom3.test
+regmultinom3.test <- multinom(formula = VD1.multicat ~ VI1.cont + VI2.cont, 
+                              data = my_data.regmultinom3)
+
+X2.regmultinom3 <- as.numeric(as.character(Anova(regmultinom3.test)$'LR Chisq'))
+p.regmultinom3 <- as.numeric(as.character(Anova(regmultinom3.test)$'Pr(>Chisq)'))
+
+# tests post hoc explorant l'effet de VD1.cont sur chaque modalité de VD1.multicat
+posthoc.regmultinom3 <- emtrends(regmultinom3.test, 
+                                 var = "VI1.cont", ~ VD1.multicat)
+
+
+# tailles d'effet de VI1.cont sur VD1.multicat (odds ratio comparant l'effet de VI1.cont sur VD1.multicat entre les groupes 1 et 2 puis entre les groupes 1 et 3)
+odds.ratio.regmultinom3 <- exp(coef(summary(regmultinom3.test)))
+
+# Obtention des résultats de la régression logistique multinomiale évaluant l'effet global de VI1.cont sur VD1.cat 
+data.frame(cbind(
+  Variable = c("VI1.cont", "VI2.cont"),
+  "X2" = X2.regmultinom3,
+  "p" = p.regmultinom3))
+
+# obtention des tests post hoc :
+
+## explorant l'effet de VD1.cont sur chaque modalité de VD1.multicat
+test(posthoc.regmultinom3, adjust = "mvt")
+
+##comparant l'effet de VI1.cont entre chaque modalité de VD1.multicat
+pairs(posthoc.regmultinom3)
+
+# des tailles d'effet
+odds.ratio.regmultinom3
+```
+
+#### Graphique
+```{r}
+adjusted.slope.regmultinom3 <- as.data.frame(
+  effect(
+    term="VI1.cont", 
+    mod = regmultinom3.test))
+
+adjusted.slope.regmultinom3.long <- adjusted.slope.regmultinom3 %>% 
+    dplyr::select(VI1.cont, prob.Categorie.1,prob.Categorie.2,prob.Categorie.3) %>%
+    pivot_longer(-VI1.cont, 
+        names_to="var",
+        values_to="VD")
+
+adjusted.slope.regmultinom3.long$var<- fct_recode(adjusted.slope.regmultinom3.long$var, 
+           "Categorie 1" = "prob.Categorie.1", 
+           "Categorie 2" = "prob.Categorie.2",
+           "Categorie 3" = "prob.Categorie.3")
+
+
+ggplot(adjusted.slope.regmultinom3.long) + 
+  geom_line(aes(x = VI1.cont, y = VD, color = var),  size = 1) + 
+  facet_wrap(~ var) +
+  ylab("Probabilité") + 
+  xlab("VI1.cont") +
+  theme_bw() + 
+  theme(axis.title.y = element_text(size = 14, hjust = 0.5, face="bold"), 
+        axis.title.x = element_text(face="bold", size = 14, hjust = 0.5)) + 
+  guides(color=FALSE) 
+```
+
+#### Interpretation
+```{r, results='asis', echo=FALSE}
+paste0(
+  "Les valeurs de VI1.cont ne sont pas liées à celles de VD1.multicat lorsque l'on ajuste par l'effet du VI2.cont (X² = ", 
+  round(X2.regmultinom3[1], digits = 3),
+  ", p = ",
+  round(p.regmultinom3[1], digits = 5), 
+  "). Plus précisement, quelle que soit la modalité de VD1.multicat, l'effet de VI1.cont n'est pas statistiquement significatif (valeur p ajustée > ",
+  round(min(test(posthoc.regmultinom3, adjust = "mvt")$p.value[1:3]), digits = 3))
+```
+
+### Régression logistique multinomiale 4
+
+#### Type de variables
+
+**Variable Dépendante :** Catégorielle (3 catégories ou +)<br>
+**Variables Indépendantes :** Numériques / Catégorielles
+
+#### Packages nécessaires
+```{r message=FALSE}
+library(ggplot2)
+library(GGally)
+library(forcats)
+library(car)
+library(nnet)
+library(tidyr)
+```
+
+#### Données réelles 
+```{r eval = FALSE}
+# choisissez la ligne appropriée au format de votre fichier de données. 
+
+# si vos données sont dans un fichier .txt
+my_data.regmultinom4 <- read.delim(file.choose())
+
+# si vos données sont dans un fichier .csv
+my_data.regmultinom4 <- read.csv(file.choose())
+
+# si vos données sont dans un fichier .xls / .xlsx
+my_data.regmultinom4 <- read_excel(file.choose())
+
+# une fois vos données chargées, vous pouvez renommer vos noms de colonnes afin qu'ils correspondent à ceux utilisés dans le code ci-dessous
+# Si vous ne souhaitez pas renommer vos noms de colonnes, sautez cette étape mais adaptez le code des parties suivantes en lui indiquant les noms de colonnes de vos données.
+
+# On crée une nouvelle colonne pour votre variable dépendante multicatégorielle (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.regmultinom4$VD1.multicat <- my_data.regmultinom4$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour vos variables indépendantes continues (remplacez 'votre.nom.de.colonne' par les noms appropriés)
+my_data.regmultinom4$VI1.cont <- my_data.regmultinom4$'votre.nom.de.colonne'
+my_data.regmultinom4$VI2.cont <- my_data.regmultinom4$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour votre variable catégorielle (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.regmultinom4$VI3.cat <- my_data.regmultinom4$'votre.nom.de.colonne'
+```
+
+#### Données fictives
+```{r}
+set.seed(4321)
+my_data.regmultinom4 <- data.frame(
+  VD1.multicat = rep(c(1,2,3), each = 40),
+  VI1.cont = c(rnorm(40)+0.35, rnorm(40)-0.35, rnorm(40)-0.35),
+  VI2.cont = rnorm(120),
+  VI3.cat = rbinom(120, 1, .4) + 1)
+
+# On renomme les catégories de VD1.multicat pour que les résultats soient plus lisibles
+my_data.regmultinom4$VD1.multicat <- fct_recode(factor(my_data.regmultinom4$VD1.multicat), 
+                                            "Categorie 1" = "1", 
+                                            "Categorie 2" = "2",
+                                            "Categorie 3" = "3") 
+
+my_data.regmultinom4$VI3.cat <- fct_recode(factor(my_data.regmultinom4$VI3.cat), 
+                                            "Caracteristique 1" = "1", 
+                                            "Caracteristique 2" = "2") 
+```
+
+#### Déclaration du type de variables
+```{r}
+my_data.regmultinom4$VD1.multicat <- factor(my_data.regmultinom4$VD1.multicat)
+my_data.regmultinom4$VI1.cont <- as.numeric(as.character(my_data.regmultinom4$VI1.cont))
+my_data.regmultinom4$VI2.cont <- as.numeric(as.character(my_data.regmultinom4$VI2.cont))
+my_data.regmultinom4$VI3.cat <- factor(my_data.regmultinom4$VI3.cat)
+```
+
+#### Inspection des données
+```{r}
+## Les graphiques situés sur la diagonale représentent la distribution des variables
+## Les graphiques (ou les valeurs de corrélation) situés au dessus et en dessous de la diagonale représentent l'association entre les différentes variables
+ggpairs(my_data.regmultinom4,
+        lower = list(continuous = wrap("smooth", alpha = 0.7), combo = "box_no_facet"),
+        upper = list(combo = "facetdensity", discrete = "facetbar"), 
+        mapping = aes(alpha = 0.8)) + theme_bw()
+```
+
+#### Analyse des données 
+```{r warning=FALSE, message=FALSE}
+# calcul de la régression logistique multinomiale et stockage des résultats dans l’objet regmultinom4.test
+regmultinom4.test <- multinom(formula = VD1.multicat ~ VI1.cont + VI2.cont + VI3.cat, 
+                              data = my_data.regmultinom4)
+
+X2.regmultinom4 <- as.numeric(as.character(Anova(regmultinom4.test)$'LR Chisq'))
+p.regmultinom4 <- as.numeric(as.character(Anova(regmultinom4.test)$'Pr(>Chisq)'))
+
+# tests post hoc explorant l'effet de VD1.cont sur chaque modalité de VD1.multicat
+posthoc.regmultinom4 <- emtrends(regmultinom4.test, 
+                                 var = "VI1.cont", ~ VD1.multicat)
+
+
+# tailles d'effet de VI1.cont sur VD1.multicat (odds ratio comparant l'effet de VI1.cont sur VD1.multicat entre les groupes 1 et 2 puis entre les groupes 1 et 3)
+odds.ratio.regmultinom4 <- exp(coef(summary(regmultinom4.test)))
+
+# Obtention des résultats de la régression logistique multinomiale évaluant l'effet global de VI1.cont sur VD1.cat 
+data.frame(cbind(
+  Variable = c("VI1.cont", "VI2.cont", "VI3.cat"),
+  "X2" = X2.regmultinom4,
+  "p" = p.regmultinom4))
+
+# obtention des tests post hoc :
+
+## explorant l'effet de VD1.cont sur chaque modalité de VD1.multicat
+test(posthoc.regmultinom4, adjust = "mvt")
+
+##comparant l'effet de VI1.cont entre chaque modalité de VD1.multicat
+pairs(posthoc.regmultinom4)
+
+# des tailles d'effet
+odds.ratio.regmultinom4
+```
+
+#### Graphique
+```{r}
+adjusted.slope.regmultinom4 <- as.data.frame(
+  effect(
+    term="VI1.cont", 
+    mod = regmultinom4.test))
+
+adjusted.slope.regmultinom4.long <- adjusted.slope.regmultinom4 %>% 
+    dplyr::select(VI1.cont, prob.Categorie.1,prob.Categorie.2,prob.Categorie.3) %>%
+    pivot_longer(-VI1.cont, 
+        names_to="var",
+        values_to="VD")
+
+adjusted.slope.regmultinom4.long$var<- fct_recode(adjusted.slope.regmultinom4.long$var, 
+           "Categorie 1" = "prob.Categorie.1", 
+           "Categorie 2" = "prob.Categorie.2",
+           "Categorie 3" = "prob.Categorie.3")
+
+
+ggplot(adjusted.slope.regmultinom4.long) + 
+  geom_line(aes(x = VI1.cont, y = VD, color = var),  size = 1) + 
+  facet_wrap(~ var) +
+  ylab("Probabilité") + 
+  xlab("VI1.cont") +
+  theme_bw() + 
+  theme(axis.title.y = element_text(size = 14, hjust = 0.5, face="bold"), 
+        axis.title.x = element_text(face="bold", size = 14, hjust = 0.5)) + 
+  guides(color=FALSE) 
+```
+
+#### Interpretation
+```{r, results='asis', echo=FALSE}
+paste0(
+  "Les valeurs de VI1.cont sont liées à celles de VD1.multicat lorsque l'on ajuste par l'effet de VI2.cont et VI3.cat (X² = ", 
+  round(X2.regmultinom4[1], digits = 3),
+  ", p = ",
+  round(p.regmultinom4[1], digits = 5), 
+  "). Plus précisement, plus VI1.cont est élevée et plus la probabilité de Catégorie 1 augmente (valeur p ajustée = ",
+  round(test(posthoc.regmultinom4, adjust = "mvt")$p.value[1], digits = 3),
+  ") et plus la probabilité de Catégorie 3 diminue (valeur p ajustée marginalement significative = ",
+    round(test(posthoc.regmultinom4, adjust = "mvt")$p.value[3], digits = 3),
+  "). La probabilité de Catégorie 2 n'est pas liée à celle de VI1.cont (valeur p ajustée = ",
+    round(test(posthoc.regmultinom4, adjust = "mvt")$p.value[2], digits = 3),
+  "). Concernant la différence entre les catégories de VD1.multicat, l'évolution des probabilités des Catégories 2 et 3 selon VI1.cont est différente de l'évolution de la probabilité de la Catégorie 1 (toutes valeurs p ajustées < ",
+  round(max(summary(pairs(posthoc.regmultinom4))$p.value[1:2]), digits = 3),
+  ")")
+
+```
+
+### Régression logistique ordinale 1
+
+#### Type de variables
+
+**Variable Dépendante :** Ordinale (3 catégories ou +)<br>
+**Variables Indépendantes :** Catégorielles<br>
+
+#### Packages nécessaires
+```{r message=FALSE}
+library(ggplot2)
+library(GGally)
+library(forcats)
+library(dplyr)
+library(car)
+library(effects)
+library(tidyr)
+library(broom)
+```
+
+#### Données réelles 
+```{r eval = FALSE}
+# choisissez la ligne appropriée au format de votre fichier de données. 
+
+# si vos données sont dans un fichier .txt
+my_data.regord1 <- read.delim(file.choose())
+
+# si vos données sont dans un fichier .csv
+my_data.regord1 <- read.csv(file.choose())
+
+# si vos données sont dans un fichier .xls / .xlsx
+my_data.regord1 <- read_excel(file.choose())
+
+# une fois vos données chargées, vous pouvez renommer vos noms de colonnes afin qu'ils correspondent à ceux utilisés dans le code ci-dessous
+# Si vous ne souhaitez pas renommer vos noms de colonnes, sautez cette étape mais adaptez le code des parties suivantes en lui indiquant les noms de colonnes de vos données.
+
+# On crée une nouvelle colonne pour votre variable dépendante ordinale (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.regord1$VD1.ord <- my_data.regord1$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour votre variable indépendante catégorielle (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.regord1$VI1.cat <- my_data.regord1$'votre.nom.de.colonne'
+```
+
+#### Données fictives
+```{r}
+set.seed(4321)
+regord1 <- rbinom(200, 1, 0.8)
+my_data.regord1 <- data.frame(
+  VD1.ord = (rbinom(200, 2, 0.5)*regord1 + 1),
+  VI1.cat = (rbinom(200, 1, 0.6)*regord1 + 1))
+
+# on recode les catégories de VD1.ord et VI1.cat pour que les résultats soient plus lisibles
+my_data.regord1$VI1.cat <- fct_recode(factor(my_data.regord1$VI1.cat), 
+                                    "Groupe 1" = "1", 
+                                    "Groupe 2" = "2") 
+
+ my_data.regord1$VD1.ord <- fct_recode(ordered(my_data.regord1$VD1.ord), 
+                                     "Faible" = "1", 
+                                     "Modere" = "2",
+                                     "Severe" = "3") 
+
+```
+
+#### Déclaration du type de variables
+```{r eval=FALSE}
+my_data.regord1$VD1.ord <- ordered(my_data.regord1$VD1.ord, 
+                                   levels = c("Faible", "Modere", "Severe"))
+my_data.regord1$VI1.cat <- factor(my_data.regord1$VI1.cat)
+```
+
+#### Inspection des données
+```{r}
+## Les graphiques situés sur la diagonale représentent la distribution des variables
+## Les graphiques (ou les valeurs de corrélation) situés au dessus et en dessous de la diagonale représentent l'association entre les différentes variables
+ggpairs(my_data.regord1,
+        lower = list(continuous = wrap("smooth", alpha = 0.7), combo = "box_no_facet"),
+        upper = list(combo = "facetdensity", discrete = "facetbar"), 
+        mapping = aes(alpha = 0.8)) + theme_bw()
+```
+
+#### Analyse des données 
+```{r warning=FALSE, message=FALSE}
+# Pour vérifier que vos catégories de VD1.ord ont bien été hierarchisées correctement
+str(my_data.regord1$VD1.ord)
+
+# calcul de la régression ordinale et stockage des résultats dans l’objet regord1.test
+regord1.test <- MASS::polr(formula = VD1.ord ~ VI1.cat, 
+                           data = my_data.regord1)
+
+# Anova(MASS::polr(formula = VD1.ord.ON ~ VI1.cat, data = my_data.regord1))
+# wilcox.test(VD1.ord ~ VI1.cat, data = my_data.regord1)
+
+# calcul de la taille d'effet de VI1.cat sur VD1.ord (odds ratio)
+oddsratio.regord1 <- exp(coef(summary(regord1.test)))
+
+# Obtention des résultats de la regression ordinale
+Anova(regord1.test)
+
+# Obtention de la taille d'effet
+oddsratio.regord1
+```
+
+#### Graphique
+```{r message=FALSE}
+crude.slope.regord1 <- as.data.frame(
+  effect(
+    term="VI1.cat", 
+    mod = regord1.test))
+
+crude.slope.regord1.long.prob <- crude.slope.regord1 %>% 
+    dplyr::select(VI1.cat, 
+                  prob.Faible,
+                  prob.Modere,
+                  prob.Severe) %>%
+    pivot_longer(-VI1.cat, 
+        names_to="VD1.ord",
+        values_to="VD")
+
+crude.slope.regord1.long.se <- crude.slope.regord1 %>% 
+    dplyr::select(VI1.cat, 
+                  se.prob.Faible,
+                  se.prob.Modere,
+                  se.prob.Severe) %>%
+    pivot_longer(-VI1.cat, 
+        names_to="VD1.ord.se",
+        values_to="SE")
+
+crude.slope.regord1.long <- cbind(crude.slope.regord1.long.prob,                                    crude.slope.regord1.long.se[,c('VD1.ord.se', 'SE')])
+
+crude.slope.regord1.long$VD1.ord<- fct_recode(crude.slope.regord1.long$VD1.ord,
+    "Faible" = "prob.Faible", 
+    "Modere" = "prob.Modere",
+    "Severe" = "prob.Severe")
+
+crude.slope.regord1.long$VD1.ord <- ordered(crude.slope.regord1.long$VD1.ord, 
+        levels = c("Faible", "Modere", "Severe"))
+
+ggplot(crude.slope.regord1.long, 
+       aes(x = VI1.cat, y = VD, color = VD1.ord)) + 
+  geom_errorbar(aes(
+      ymin = VD - SE,
+      ymax = VD + SE),
+      width = 0, position = position_dodge(0.3)) +
+  geom_point(size = 2, position = position_dodge(0.3)) +
+  ylab("Probabilité") + xlab("VI1.cat") +
+  theme_bw() + 
+  theme(
+    axis.title.y = element_text(size = 14, hjust = 0.5, face ="bold"), 
+    axis.title.x = element_text(face ="bold", size = 14, hjust = 0.5)) + 
+  scale_color_grey(start=0.7, end=0.01) + 
+  scale_y_continuous(limits=c(0,1))
+```
+
+#### Interpretation
+```{r, results='asis', echo=FALSE}
+paste0(
+  "La probabilité d'obtenir un score faible à VD1.ord (comparativement à un score modéré ou élevé) est plus importante dans le groupe 1 que dans le groupe 2 (X² = ",
+  round(tidy(Anova(regord1.test))$statistic[1], digits = 3),
+  ", Odds ratio = ",
+  round(oddsratio.regord1[1,1], digits = 3),
+  ", p = ",
+  round(tidy(Anova(regord1.test))$p.value[1], digits = 7),
+  ").")
+```
+
+### Régression logistique ordinale 2
+
+#### Type de variables
+
+**Variable Dépendante :** Ordinale (3 catégories ou +)<br>
+**Variables Indépendantes:** Numériques
+
+#### Packages nécessaires
+```{r message=FALSE}
+library(ggplot2)
+library(GGally)
+library(forcats)
+library(dplyr)
+library(car)
+library(effects)
+library(tidyr)
+library(broom)
+```
+
+#### Données réelles 
+```{r eval = FALSE}
+# choisissez la ligne appropriée au format de votre fichier de données. 
+
+# si vos données sont dans un fichier .txt
+my_data.regord2 <- read.delim(file.choose())
+
+# si vos données sont dans un fichier .csv
+my_data.regord2 <- read.csv(file.choose())
+
+# si vos données sont dans un fichier .xls / .xlsx
+my_data.regord2 <- read_excel(file.choose())
+
+# une fois vos données chargées, vous pouvez renommer vos noms de colonnes afin qu'ils correspondent à ceux utilisés dans le code ci-dessous
+# Si vous ne souhaitez pas renommer vos noms de colonnes, sautez cette étape mais adaptez le code des parties suivantes en lui indiquant les noms de colonnes de vos données.
+
+# On crée une nouvelle colonne pour votre variable dépendante ordinale (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.regord2$VD1.ord <- my_data.regord2$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour votre variable indépendante continue (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.regord2$VI1.cont <- my_data.regord2$'votre.nom.de.colonne'
+```
+
+#### Données fictives
+```{r}
+set.seed(4321)
+my_data.regord2 <- data.frame(
+  VD1.ord = rep(c(1,2,3), each=35),
+  VI1.cont = c(rnorm(35)-0.3, rnorm(35), rnorm(35)+0.3))
+
+# on recode les catégories de VD1.ord pour que les résultats soient plus lisibles
+my_data.regord2$VD1.ord <- fct_recode(factor(my_data.regord2$VD1.ord), 
+                                    "Faible" = "1", 
+                                    "Modere" = "2",
+                                    "Severe" = "3") 
+```
+
+#### Déclaration du type de variables
+```{r}
+my_data.regord2$VD1.ord <- ordered(my_data.regord2$VD1.ord, 
+                                   levels = c("Faible", "Modere", "Severe"))
+my_data.regord2$VI1.cont <- as.numeric(as.character(my_data.regord2$VI1.cont))
+
+```
+
+#### Inspection des données
+```{r}
+## Les graphiques situés sur la diagonale représentent la distribution des variables
+## Les graphiques (ou les valeurs de corrélation) situés au dessus et en dessous de la diagonale représentent l'association entre les différentes variables
+ggpairs(my_data.regord2,
+        lower = list(continuous = wrap("smooth", alpha = 0.7), combo = "box_no_facet"),
+        upper = list(combo = "facetdensity", discrete = "facetbar"), 
+        mapping = aes(alpha = 0.8)) + theme_bw()
+```
+
+#### Analyse des données 
+```{r warning=FALSE, message=FALSE}
+# Pour vérifier que vos catégories de VD1.ord ont bien été hierarchisées correctement
+str(my_data.regord2$VD1.ord)
+
+# calcul du test de régression ordinale et stockage des résultats dans l’objet regord2.test
+regord2.test <- MASS::polr(formula = ordered(VD1.ord) ~ VI1.cont, 
+                           data = my_data.regord2)
+
+# calcul des odds ratio
+oddsratio.regord2 <- exp(coef(summary(regord2.test)))
+
+# obtention des résultats de la régression logistique ordinale
+Anova(regord2.test)
+
+# obtention de la taille d'effet
+oddsratio.regord2
+```
+
+#### Graphique
+```{r warning=FALSE, message=FALSE}
+crude.slope.regord2 <- as.data.frame(
+  effect(
+    term="VI1.cont", 
+    mod = regord2.test))
+
+crude.slope.regord2.long <- crude.slope.regord2 %>% 
+    dplyr::select(VI1.cont, 
+                  prob.Faible,
+                  prob.Modere,
+                  prob.Severe) %>%
+    pivot_longer(-VI1.cont, 
+        names_to="VD1.ord",
+        values_to="VD")
+
+crude.slope.regord2.long$VD1.ord<- fct_recode(crude.slope.regord2.long$VD1.ord,
+    "Faible" = "prob.Faible", 
+    "Modere" = "prob.Modere",
+    "Severe" = "prob.Severe")
+
+crude.slope.regord2.long$VD1.ord <- ordered(crude.slope.regord2.long$VD1.ord, 
+        levels = c("Faible", "Modere", "Severe"))
+
+ggplot(crude.slope.regord2.long) + 
+  geom_line(aes(x = VI1.cont, y = VD, color = VD1.ord),  size = 1) + 
+  ylab("Probabilité") + xlab("VI1.cont") +
+  theme_bw() + 
+  theme(
+    axis.title.y = element_text(size = 14, hjust = 0.5, face ="bold"), 
+    axis.title.x = element_text(face ="bold", size = 14, hjust = 0.5)) +
+  scale_color_grey(start=0.9, end=0.1) + 
+  scale_y_continuous(limits=c(0,1))
+```
+
+#### Interpretation
+```{r, results='asis', echo=FALSE}
+paste0(
+  "La probabilité d'obtenir un score élevé à VD1.ord (comparativement à un score faible ou modéré) augmente à mesure que VI1.cont augmente (X² = ", 
+  round(tidy(Anova(regord2.test))$statistic[1], digits = 3),
+  ", OR = ",
+  round(oddsratio.regord2[1,1], digits = 3),
+  ", p = ",
+  round(tidy(Anova(regord2.test))$p.value[1], digits = 4),
+  ").") 
+```
+
+### Régression logistique ordinale 3
+
+#### Type de variables
+
+**Variable Dépendante :** Ordinale (3 catégories ou +)<br>
+**Variables Indépendantes :** Numériques / Catégorielles (2 catégories ou +) <br>
+
+#### Packages nécessaires
+```{r message=FALSE}
+library(ggplot2)
+library(GGally)
+library(forcats)
+library(dplyr)
+library(car)
+library(effects)
+library(tidyr)
+library(broom)
+```
+
+#### Données réelles 
+```{r eval = FALSE}
+# choisissez la ligne appropriée au format de votre fichier de données. 
+
+# si vos données sont dans un fichier .txt
+my_data.regord3 <- read.delim(file.choose())
+
+# si vos données sont dans un fichier .csv
+my_data.regord3 <- read.csv(file.choose())
+
+# si vos données sont dans un fichier .xls / .xlsx
+my_data.regord3 <- read_excel(file.choose())
+
+# une fois vos données chargées, vous pouvez renommer vos noms de colonnes afin qu'ils correspondent à ceux utilisés dans le code ci-dessous
+# Si vous ne souhaitez pas renommer vos noms de colonnes, sautez cette étape mais adaptez le code des parties suivantes en lui indiquant les noms de colonnes de vos données.
+
+# On crée une nouvelle colonne pour votre variable dépendante ordinale (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.regord3$VD1.ord <- my_data.regord3$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour vos variables indépendantes catégorielles (remplacez 'votre.nom.de.colonne' par les noms appropriés)
+my_data.regord3$VI1.cat <- my_data.regord3$'votre.nom.de.colonne'
+my_data.regord3$VI2.multicat <- my_data.regord3$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour votre variable indépendante continue (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.regord3$VI1.cont <- my_data.regord3$'votre.nom.de.colonne'
+```
+
+#### Données fictives
+```{r}
+set.seed(4321)
+regord3 <- rbinom(200, 1, 0.8)
+my_data.regord3 <- data.frame(
+  VD1.ord = (rbinom(200, 2, 0.5)*regord3 + 1),
+  VI1.cat = (rbinom(200, 1, 0.6)*regord3 + 1),
+  VI2.multicat = (rbinom(200, 3, 0.5)*regord3),
+  VI3.cont = rnorm(200))
+
+# on recode les catégories de VD1.ord, VI1.cat et VI2.multicat pour que les résultats soient plus lisibles
+my_data.regord3$VD1.ord <- fct_recode(factor(my_data.regord3$VD1.ord), 
+                                    "Faible" = "1", 
+                                    "Modere" = "2",
+                                    "Severe" = "3") 
+
+my_data.regord3$VI1.cat <- fct_recode(factor(my_data.regord3$VI1.cat), 
+                                    "Groupe 1" = "1", 
+                                    "Groupe 2" = "2") 
+
+my_data.regord3$VI2.multicat <- fct_recode(factor(my_data.regord3$VI2.multicat), 
+                                    "Caracteristique 1" = "0", 
+                                    "Caracteristique 2" = "1",
+                                    "Caracteristique 3" = "2",
+                                    "Caracteristique 4" = "3") 
+```
+
+#### Déclaration du type de variables
+```{r}
+my_data.regord3$VD1.ord <- ordered(my_data.regord3$VD1.ord, 
+                                   levels = c("Faible", "Modere", "Severe"))
+my_data.regord3$VI1.cat <- factor(my_data.regord3$VI1.cat)
+my_data.regord3$VI2.multicat <- factor(my_data.regord3$VI2.multicat)
+my_data.regord3$VI3.cont <-as.numeric(as.character(my_data.regord3$VI3.cont))
+```
+
+#### Inspection des données
+```{r}
+## Les graphiques situés sur la diagonale représentent la distribution des variables
+## Les graphiques (ou les valeurs de corrélation) situés au dessus et en dessous de la diagonale représentent l'association entre les différentes variables
+ggpairs(my_data.regord3,
+        lower = list(continuous = wrap("smooth", alpha = 0.7), combo = "box_no_facet"),
+        upper = list(combo = "facetdensity", discrete = "facetbar"), 
+        mapping = aes(alpha = 0.8)) + theme_bw()
+```
+
+#### Analyse des données 
+```{r warning=FALSE, message=FALSE}
+# pour vérifier que vos catégories de VD1.ord ont bien été hierarchisées correctement
+str(my_data.regord3$VD1.ord)
+
+# calcul du test de régression ordinale et stockage des résultats dans l’objet regord3.test
+regord3.test <- MASS::polr(formula = VD1.ord ~ VI1.cat + VI2.multicat + VI3.cont, 
+                           data = my_data.regord3)
+
+# calcul de la taille d'effet de VI1.cat sur VD1.ord (odds ratio ajusté par l'effet de VI2.multicat)
+oddsratio.regord3 <- exp(coef(summary(regord3.test)))
+
+# obtention des résultats de la régression logistique ordinale
+Anova(regord3.test)
+
+# obtention de la taille d'effet
+oddsratio.regord3
+```
+
+#### Graphique
+```{r}
+adjusted.slope.regord3 <- as.data.frame(
+  effect(
+    term="VI1.cat", 
+    mod = regord3.test))
+
+adjusted.slope.regord3.long.prob <- adjusted.slope.regord3 %>% 
+    dplyr::select(VI1.cat, 
+                  prob.Faible,
+                  prob.Modere,
+                  prob.Severe) %>%
+    pivot_longer(-VI1.cat, 
+        names_to="VD1.ord",
+        values_to="VD")
+
+adjusted.slope.regord3.long.se <- adjusted.slope.regord3 %>% 
+    dplyr::select(VI1.cat, 
+                  se.prob.Faible,
+                  se.prob.Modere,
+                  se.prob.Severe) %>%
+    pivot_longer(-VI1.cat, 
+        names_to="VD1.ord.se",
+        values_to="SE")
+
+adjusted.slope.regord3.long <- cbind(adjusted.slope.regord3.long.prob,                                    adjusted.slope.regord3.long.se[,c('VD1.ord.se', 'SE')])
+
+adjusted.slope.regord3.long$VD1.ord<- fct_recode(adjusted.slope.regord3.long$VD1.ord,
+    "Faible" = "prob.Faible", 
+    "Modere" = "prob.Modere",
+    "Severe" = "prob.Severe")
+
+adjusted.slope.regord3.long$VD1.ord <- factor(adjusted.slope.regord3.long$VD1.ord, 
+        levels = c("Faible", "Modere", "Severe"))
+
+ggplot(adjusted.slope.regord3.long, 
+       aes(x = VI1.cat, y = VD, color = VD1.ord)) + 
+  geom_errorbar(aes(
+      ymin = VD - SE,
+      ymax = VD + SE),
+      width = 0, position = position_dodge(0.3)) +
+  geom_point(size = 2, position = position_dodge(0.3)) +
+  ylab("Probabilité") + xlab("VI1.cat") +
+  theme_bw() + 
+  theme(
+    axis.title.y = element_text(size = 14, hjust = 0.5, face ="bold"), 
+    axis.title.x = element_text(face ="bold", size = 14, hjust = 0.5)) +
+  scale_color_grey(start=0.7, end=0.01) + 
+  scale_y_continuous(limits=c(0,1))
+```
+
+#### Interpretation
+```{r, results='asis', echo=FALSE}
+paste0(
+  "La probabilité d'obtenir un score faible à VD1.ord (comparativement à un score modéré ou élevé) est plus importante dans le groupe 1 que dans le groupe 2 même lorsque l'on ajuste par VI2.multicat (X² = ",
+  round(tidy(Anova(regord3.test))$statistic[1], digits = 3),
+  ", Odds ratio = ",
+  round(oddsratio.regord3[1,1], digits = 3),
+  ", p = ",
+  round(tidy(Anova(regord3.test))$p.value[1], digits = 7),
+  ").")
+```
+
+## Plusieurs VD numériques
+
+### MANOVA
+
+#### Type de variables
+
+**Variables Dépendantes :** Numérique <br>
+**Variables Indépendantes :** Catégorielles<br>
+
+#### Packages nécessaires
+```{r message=FALSE}
+library(ggplot2)
+library(GGally)
+library(rstatix)
+library(dplyr)
+library(effects)
+library(forcats)
+library(emmeans)
+library(tidyr)
+```
+
+#### Données réelles 
+```{r eval = FALSE}
+# choisissez la ligne appropriée au format de votre fichier de données. 
+
+# si vos données sont dans un fichier .txt
+my_data.manova <- read.delim(file.choose())
+
+# si vos données sont dans un fichier .csv
+my_data.manova <- read.csv(file.choose())
+
+# si vos données sont dans un fichier .xls / .xlsx
+my_data.manova <- read_excel(file.choose())
+
+# une fois vos données chargées, vous pouvez renommer vos noms de colonnes afin qu'ils correspondent à ceux utilisés dans le code ci-dessous
+# Si vous ne souhaitez pas renommer vos noms de colonnes, sautez cette étape mais adaptez le code des parties suivantes en lui indiquant les noms de colonnes de vos données.
+
+# On crée une nouvelle colonne pour vos variables dépendantes continues (remplacez 'votre.nom.de.colonne' par les noms appropriés)
+my_data.manova$VD1.cont <- my_data.manova$'votre.nom.de.colonne'
+my_data.manova$VD2.cont <- my_data.manova$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour vos variables indépendantes catégorielles (remplacez 'votre.nom.de.colonne' par les noms appropriés)
+my_data.manova$VI1.cat <- my_data.manova$'votre.nom.de.colonne'
+my_data.manova$VI2.cat <- my_data.manova$'votre.nom.de.colonne'
+```
+
+#### Données fictives
+```{r}
+set.seed(4321)
+manova <- rnorm(50)
+my_data.manova <- data.frame(
+  VD1.cont = rnorm(50)*2 + 1*manova,
+  VD2.cont = rnorm(50)+ 0.2*manova,
+  VI1.cat = rep(c(1,2), each=25),
+  VI2.cat = rbinom(50, 1, 0.5) + 1)
+
+# on recode les catégories de VI1.cat et VI2.cat pour que les résultats soient plus lisibles
+my_data.manova$VI1.cat <- fct_recode(factor(my_data.manova$VI1.cat), 
+                                    "Groupe 1" = "1", 
+                                    "Groupe 2" = "2") 
+
+my_data.manova$VI2.cat <- fct_recode(factor(my_data.manova$VI2.cat), 
+                                    "Caracteristique 1" = "1", 
+                                    "Caracteristique 2" = "2") 
+```
+
+#### Déclaration du type de variables
+```{r}
+my_data.manova$VD1.cont <- as.numeric(as.character(my_data.manova$VD1.cont))
+my_data.manova$VD2.cont <- as.numeric(as.character(my_data.manova$VD2.cont))
+my_data.manova$VI1.cat <- factor(my_data.manova$VI1.cat)
+my_data.manova$VI2.cat <- factor(my_data.manova$VI2.cat)
+```
+
+#### Inspection des données
+```{r}
+## Les graphiques situés sur la diagonale représentent la distribution des variables
+## Les graphiques (ou les valeurs de corrélation) situés au dessus et en dessous de la diagonale représentent l'association entre les différentes variables
+ggpairs(my_data.manova,
+        lower = list(continuous = wrap("smooth", alpha = 0.7), combo = "box_no_facet"),
+        upper = list(combo = "facetdensity", discrete = "facetbar"), 
+        mapping = aes(alpha = 0.8)) + theme_bw()
+```
+
+#### Analyse des données 
+```{r warning=FALSE, message=FALSE}
+# calcul de la manova et stockage des résultats dans l’objet manova.test
+manova.test <- lm(formula = cbind(VD1.cont, VD2.cont) ~ VI1.cat*VI2.cat, 
+                  contrasts = list(
+                    VI1.cat = "contr.sum",
+                    VI2.cat = "contr.sum"),
+                 data = my_data.manova)
+
+# tests post-hocs évaluant l'effet principal de VI1.cat pour chaque modalité de VI2.cat et pour chaque variable dépendante (p-values non ajustées)
+posthoc.manova <- emmeans(manova.test, consec ~ VI1.cat|VD.mult*VI2.cat, mult.names = "VD.mult")
+
+# obtention des résultats de la manova
+
+## résultats multivariés 
+Anova(manova.test, type = 3)
+
+## résultats univariés 
+summary(manova.test)
+
+# résultats des tests post hoc
+posthoc.manova
+```
+
+#### Graphique
+```{r}
+# graphique représentant les effets multivariés
+crude.manova <- do.call(rbind, data.frame(effect(term="VI1.cat*VI2.cat", mod= manova.test)))
+crude.manova$Outcome <- rep(c("VD1.cont", "VD2.cont"), each = nrow(crude.manova)/2)
+
+ggplot(crude.manova, 
+       aes(x = VI1.cat, y = fit, fill = VI1.cat)) +
+  geom_hline(aes(yintercept = 0)) + 
+  geom_bar(stat = "identity", color = "black", alpha = 0.7,
+           position = position_dodge2()) +
+  geom_errorbar(aes(ymin = fit - se, 
+                    ymax = fit + se), 
+                position = position_dodge2(), 
+                color = "black") +
+  facet_wrap(~ VI2.cat) +
+  ylab("VD multivariée") + xlab("VI1.cat") + 
+  theme_bw() + 
+  theme(axis.title.y = element_text(size = 14, hjust = 0.5, face="bold"), 
+        axis.title.x = element_text(face="bold", size = 14, hjust = 0.5)) + 
+  scale_fill_grey(start=0.8, end = 0.4) + 
+  guides(fill=FALSE)
+
+
+my_data.manova.long <- my_data.manova %>%
+  pivot_longer(cols = -c(VI1.cat, VI2.cat),
+               names_to = "VD", 
+               values_to = "VD.values")
+
+# graphique représentant les effets univariés
+ggplot(my_data.manova.long, aes(x = VI1.cat, y = VD.values, fill = VD)) +
+  geom_boxplot(color="black", outlier.color="red") + 
+  facet_wrap(~ VI2.cat) +
+  ylab("Valeur de chaque VD") + xlab("VI1.cat") + 
+  theme_bw() + 
+  theme(axis.title.y = element_text(size = 14, hjust = 0.5, face="bold"), 
+        axis.title.x = element_text(face="bold", size = 14, hjust = 0.5)) +
+  scale_fill_grey(start=0.8, end = 0.4)
+```
+
+#### Interprétation
+```{r,results='asis', echo=FALSE}
+fct.manova <- car:::print.Anova.mlm
+body(fct.manova)[[16]] <- quote(invisible(tests))
+body(fct.manova)[[15]] <- NULL
+df.manova <- do.call(rbind, lapply(c("Pillai"), 
+       function(i) fct.manova(Anova(manova.test, type=3))))
+
+paste0(
+  "L'effet multivarié de l'interaction VI1.cat x VI2.cat sur VD1.cont et VD2.cont n'est pas significatif (F = ", 
+  round(df.manova$`approx F`[4], digits = 3), 
+  ", p = ",
+  round(df.manova$`Pr(>F)`[4], digits = 3), 
+  "). Quelle que soit la variable dépendante ou la modalité de VI2.cat, l'effet de VI1.cat n'était pas significatif (toutes valeurs p non ajustées > ",
+  round(min(summary(posthoc.manova)$contrasts$p.value), digits = 3),
+  ")")
+```
+
+### Regression linéaire multivariée 1
+
+#### Type de variables
+
+**Variables Dépendantes :** Numérique <br>
+**Variables Indépendantes :** Numériques<br>
+
+#### Packages nécessaires
+```{r message=FALSE}
+library(ggplot2)
+library(GGally)
+library(rstatix)
+library(dplyr)
+library(effects)
+library(tidyr)
+```
+
+#### Données réelles 
+```{r eval = FALSE}
+# choisissez la ligne appropriée au format de votre fichier de données. 
+
+# si vos données sont dans un fichier .txt
+regmultivariate1 <- read.delim(file.choose())
+
+# si vos données sont dans un fichier .csv
+regmultivariate1 <- read.csv(file.choose())
+
+# si vos données sont dans un fichier .xls / .xlsx
+regmultivariate1 <- read_excel(file.choose())
+
+# une fois vos données chargées, vous pouvez renommer vos noms de colonnes afin qu'ils correspondent à ceux utilisés dans le code ci-dessous
+# Si vous ne souhaitez pas renommer vos noms de colonnes, sautez cette étape mais adaptez le code des parties suivantes en lui indiquant les noms de colonnes de vos données.
+
+# On crée une nouvelle colonne pour vos variables dépendantes continues (remplacez 'votre.nom.de.colonne' par les noms appropriés)
+regmultivariate1$VD1.cont <- regmultivariate1$'votre.nom.de.colonne'
+regmultivariate1$VD2.cont <- regmultivariate1$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour vos variables indépendantes continues (remplacez 'votre.nom.de.colonne' par les noms appropriés)
+regmultivariate1$VI1.cont <- regmultivariate1$'votre.nom.de.colonne'
+regmultivariate1$VI2.cont <- regmultivariate1$'votre.nom.de.colonne'
+```
+
+#### Données fictives
+```{r}
+set.seed(4321)
+regmultivariate1 <- rnorm(65)*3
+my_data.regmultivariate1 <- data.frame(
+  VD1.cont = rnorm(65) + 1*regmultivariate1,
+  VD2.cont = rnorm(65) + 0.2*regmultivariate1,
+  VI1.cont = rnorm(65)+ 0.2*regmultivariate1)
+```
+
+#### Déclaration du type de variables
+```{r}
+my_data.regmultivariate1$VD1.cont <- as.numeric(as.character(my_data.regmultivariate1$VD1.cont))
+my_data.regmultivariate1$VD2.cont <- as.numeric(as.character(my_data.regmultivariate1$VD2.cont))
+my_data.regmultivariate1$VI1.cont <- as.numeric(as.character(my_data.regmultivariate1$VI1.cont))
+```
+
+#### Inspection des données
+```{r}
+## Les graphiques situés sur la diagonale représentent la distribution des variables
+## Les graphiques (ou les valeurs de corrélation) situés au dessus et en dessous de la diagonale représentent l'association entre les différentes variables
+ggpairs(my_data.regmultivariate1,
+        lower = list(continuous = wrap("smooth", alpha = 0.7), combo = "box_no_facet"),
+        upper = list(combo = "facetdensity", discrete = "facetbar"), 
+        mapping = aes(alpha = 0.8)) + theme_bw()
+```
+
+#### Analyse des données 
+```{r warning=FALSE, message=FALSE}
+# calcul de la régression multivariée et stockage des résultats dans l’objet regmultivariate1.test
+regmultivariate1.test <- lm(formula = cbind(VD1.cont, VD2.cont) ~ VI1.cont,
+                    data = my_data.regmultivariate1)
+
+# obtention des résultats de la régression linéaire multivariée
+
+# effet multivarié
+Anova(regmultivariate1.test)
+
+# effet univarié
+summary(regmultivariate1.test)
+```
+
+#### Graphique
+```{r}
+# Chaque droite représente l'effet de VI1.cont sur chacune des deux variables dépendantes. Les zones plus claires autour des droites représentent les intervalles de confiance à 95%
+crude.slope.regmultivariate1 <- do.call(rbind,
+  as.data.frame(
+    effect(
+      term = "VI1.cont", 
+      mod = regmultivariate1.test)))
+
+crude.slope.regmultivariate1$Outcome <- rep(c("VD1.cont", "VD2.cont"), each = nrow(crude.slope.regmultivariate1)/2)
+
+my_data.regmultivariate1.long <- my_data.regmultivariate1 %>% 
+  pivot_longer(cols = c(VD1.cont, VD2.cont),
+               names_to = "VD.names",
+               values_to = "VD")
+
+
+ggplot() +
+  geom_point(data = my_data.regmultivariate1.long, 
+       aes(x = VI1.cont, y = VD, color = VD.names),
+       size = 3, alpha = 0.4) + 
+  geom_ribbon(data = crude.slope.regmultivariate1, 
+         aes(x = VI1.cont, y = fit, 
+             fill = Outcome,
+             ymin = lower, ymax = upper), 
+         alpha=0.7) +
+  geom_line(data = crude.slope.regmultivariate1, 
+        aes(x = VI1.cont , y = fit, color = Outcome), 
+        size = 1) +
+  ylab("VD1.cont") + xlab("VI1.cont") + 
+  theme_bw() + 
+  theme(axis.title.y = element_text(size = 14, hjust = 0.5, face="bold"), 
+        axis.title.x = element_text(face="bold", size = 14, hjust = 0.5)) +
+  scale_color_manual(values = c("black", "red")) +
+  scale_fill_manual(values = c("lightgrey", "#FDA2A2")) +
+  guides(fill=FALSE)
+```
+
+#### Interprétation
+```{r,results='asis', echo=FALSE}
+df.regmultivariate1 <- do.call(rbind, lapply(c("Pillai"), 
+       function(i) fct.manova(Anova(regmultivariate1.test, type=3))))
+
+paste0(
+  "L'effet multivarié de VI1.cont sur VD1.cont et VD2.cont est statistiquement significatif (F = ", 
+  round(df.regmultivariate1$`approx F`[2], digits = 3), 
+  ", p = ",
+  round(df.regmultivariate1$`Pr(>F)`[2], digits = 6), 
+  "). Quelle que soit la variable dépendante, l'effet univarié de VI1.cont était significatif ou marginalement significatif (toutes valeurs p non ajustées < ",
+  round(max(
+    summary(regmultivariate1.test)$'Response VD2'$coefficients[2,4],
+    summary(regmultivariate1.test)$'Response VD1'$coefficients[2,4]), digits = 4),
+  ")")
+```
+
+### MANCOVA
+
+**ATTENTION :** si votre variable indépendante principale est **Numérique** OU que vous faites une hypothèse d'interaction entre votre VI principale catégorielle et une autre covariable, reportez-vous à la section suivante **Régression linéaire multivariée 2**.<br>
+
+Dans le cas contraire (votre VI principale est catégorielle ET vous ne faites pas d'hypothèse d'interaction entre votre VI catégorielle et une covariable), utilisez une MANCOVA décrite dans cette vignette. 
+
+
+#### Type de variables
+
+**Variables Dépendantes :** Numériques <br>
+**Variable indépendante principale:** Catégorielle<br>
+**Autres variables indépendantes (covariables) :** Numériques / Catégorielles<br>
+
+#### Packages nécessaires
+```{r message=FALSE}
+library(ggplot2)
+library(GGally)
+library(rstatix)
+library(dplyr)
+library(effects)
+library(forcats)
+library(emmeans)
+library(tidyr)
+```
+
+#### Données réelles 
+```{r eval = FALSE}
+# choisissez la ligne appropriée au format de votre fichier de données. 
+
+# si vos données sont dans un fichier .txt
+my_data.mancova <- read.delim(file.choose())
+
+# si vos données sont dans un fichier .csv
+my_data.mancova <- read.csv(file.choose())
+
+# si vos données sont dans un fichier .xls / .xlsx
+my_data.mancova <- read_excel(file.choose())
+
+# une fois vos données chargées, vous pouvez renommer vos noms de colonnes afin qu'ils correspondent à ceux utilisés dans le code ci-dessous
+# Si vous ne souhaitez pas renommer vos noms de colonnes, sautez cette étape mais adaptez le code des parties suivantes en lui indiquant les noms de colonnes de vos données.
+
+# On crée une nouvelle colonne pour vos variables dépendantes continues (remplacez 'votre.nom.de.colonne' par les noms appropriés)
+my_data.mancova$VD1.cont <- my_data.mancova$'votre.nom.de.colonne'
+my_data.mancova$VD2.cont <- my_data.mancova$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour votre variable indépendante catégorielle (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.mancova$VI1.cat <- my_data.mancova$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour votre variable indépendante continue (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.mancova$VI1.cont <- my_data.mancova$'votre.nom.de.colonne'
+```
+
+#### Données fictives
+```{r}
+set.seed(4321)
+mancova <- rnorm(50)
+my_data.mancova <- data.frame(
+  VD1.cont = rnorm(50)*2 + 1*mancova,
+  VD2.cont = rnorm(50)+ 0.2*mancova,
+  VI1.cat = rbinom(50, 1, 0.5) + 1,
+  VI2.cont = rnorm(50)+ 0.6*mancova)
+
+my_data.mancova$VI1.cat <- fct_recode(factor(my_data.mancova$VI1.cat), 
+          "Groupe 1" = "1", 
+          "Groupe 2" = "2") 
+```
+
+#### Déclaration du type de variables
+```{r}
+my_data.mancova$VD1.cont <- as.numeric(as.character(my_data.mancova$VD1.cont))
+my_data.mancova$VD2.cont <- as.numeric(as.character(my_data.mancova$VD2.cont))
+my_data.mancova$VI1.cat <- factor(my_data.mancova$VI1.cat)
+my_data.mancova$VI2.cont <- as.numeric(as.character(my_data.mancova$VI2.cont))
+```
+
+#### Inspection des données
+```{r}
+## Les graphiques situés sur la diagonale représentent la distribution des variables
+## Les graphiques (ou les valeurs de corrélation) situés au dessus et en dessous de la diagonale représentent l'association entre les différentes variables
+ggpairs(my_data.mancova,
+        lower = list(continuous = wrap("smooth", alpha = 0.7), combo = "box_no_facet"),
+        upper = list(combo = "facetdensity", discrete = "facetbar"), 
+        mapping = aes(alpha = 0.8)) + theme_bw()
+```
+
+#### Analyse des données 
+```{r warning=FALSE, message=FALSE}
+# calcul de la mancova et stockage des résultats dans l’objet mancova.test
+mancova.test <- lm(formula = cbind(VD1.cont, VD2.cont) ~ VI1.cat + VI2.cont,
+                 data = my_data.mancova)
+
+# obtention des résultats de la mancova
+
+## résultats multivariés 
+Anova(mancova.test)
+
+## résultats univariés 
+summary(mancova.test)
+```
+
+#### Graphique
+```{r}
+# graphique représentant les effets multivariés
+adjusted.mancova <- do.call(rbind, data.frame(effect(term="VI1.cat", mod= mancova.test)))
+adjusted.mancova$Outcome <- rep(c("VD1.cont", "VD2.cont"), each = nrow(adjusted.mancova)/2)
+
+ggplot(adjusted.mancova, 
+       aes(x = VI1.cat, y = fit, fill = VI1.cat)) +
+  geom_hline(aes(yintercept = 0)) + 
+  geom_bar(stat = "identity", color = "black", alpha = 0.7,
+           position = position_dodge2()) +
+  geom_errorbar(aes(ymin = fit - se, 
+                    ymax = fit + se), 
+                width = 0.1,
+                position = position_dodge2(width = 0.9), 
+                color = "black") +
+  facet_wrap(~ Outcome) +
+  ylab("VD multivariée") + xlab("VI1.cat") + 
+  theme_bw() + 
+  theme(axis.title.y = element_text(size = 14, hjust = 0.5, face="bold"), 
+        axis.title.x = element_text(face="bold", size = 14, hjust = 0.5)) + 
+  scale_fill_grey(start=0.8, end = 0.4) + 
+  guides(fill=FALSE)
+```
+
+#### Interprétation
+```{r,results='asis', echo=FALSE}
+fct.mancova <- car:::print.Anova.mlm
+body(fct.mancova)[[16]] <- quote(invisible(tests))
+body(fct.mancova)[[15]] <- NULL
+df.mancova <- do.call(rbind, lapply(c("Pillai"), 
+       function(i) fct.mancova(Anova(mancova.test))))
+
+paste0(
+  "L'effet multivarié de VI1.cat sur VD1.cont et VD2.cont n'est pas significatif (F = ", 
+  round(df.mancova$`approx F`[1], digits = 3), 
+  ", p = ",
+  round(df.mancova$`Pr(>F)`[1], digits = 3), 
+  "). Plus précisément, l'effet univarié de VI1.cat était non significatif sur VD1.cont (b = ",
+  round(summary(mancova.test)$'Response VD1.cont'$coefficients[2,1], digits = 3),
+  ", SE = ",
+  round(summary(mancova.test)$'Response VD1.cont'$coefficients[2,2], digits = 3),
+  ", p = ",
+  round(summary(mancova.test)$'Response VD1.cont'$coefficients[2,4], digits = 3),
+  "), et sur VD2.cont (b = ",
+  round(summary(mancova.test)$'Response VD2.cont'$coefficients[2,1], digits = 3),
+  ", SE = ",
+  round(summary(mancova.test)$'Response VD2.cont'$coefficients[2,2], digits = 3),
+  ", p = ",
+  round(summary(mancova.test)$'Response VD2.cont'$coefficients[2,4], digits = 3),
+  ")")
+```
+
+### Regression linéaire multivariée 2
+
+**ATTENTION :** si votre variable indépendante principale est **catégorielle** ET que vous ne faites pas d'hypothèse d'interaction entre cette VI principale catégorielle et une autre covariable, reportez-vous à la section précédente **MANCOVA**.<br>
+
+Dans le cas contraire (votre VI principale est numérique OU vous faites une hypothèse d'interaction entre votre VI catégorielle et une covariable), utilisez une régression linéaire multivariée décrite dans cette vignette. 
+
+#### Type de variables
+
+**Variables Dépendantes :** Numérique <br>
+**Variables Indépendantes :** Numérique / Catégorielles
+
+#### Packages nécessaires
+```{r message=FALSE}
+library(ggplot2)
+library(GGally)
+library(rstatix)
+library(dplyr)
+library(effects)
+library(tidyr)
+library(effects)
+```
+
+#### Données réelles 
+```{r eval = FALSE}
+# choisissez la ligne appropriée au format de votre fichier de données. 
+
+# si vos données sont dans un fichier .txt
+my_data.regmultivariate2 <- read.delim(file.choose())
+
+# si vos données sont dans un fichier .csv
+my_data.regmultivariate2 <- read.csv(file.choose())
+
+# si vos données sont dans un fichier .xls / .xlsx
+my_data.regmultivariate2 <- read_excel(file.choose())
+
+# une fois vos données chargées, vous pouvez renommer vos noms de colonnes afin qu'ils correspondent à ceux utilisés dans le code ci-dessous
+# Si vous ne souhaitez pas renommer vos noms de colonnes, sautez cette étape mais adaptez le code des parties suivantes en lui indiquant les noms de colonnes de vos données.
+
+# On crée une nouvelle colonne pour vos variables dépendantes continues (remplacez 'votre.nom.de.colonne' par les noms appropriés)
+my_data.regmultivariate2$VD1.cont <- my_data.regmultivariate2$'votre.nom.de.colonne'
+my_data.regmultivariate2$VD2.cont <- my_data.regmultivariate2$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour vos variables indépendantes continues (remplacez 'votre.nom.de.colonne' par les noms appropriés)
+my_data.regmultivariate2$VI1.cont <- my_data.regmultivariate2$'votre.nom.de.colonne'
+my_data.regmultivariate2$VI2.cont <- my_data.regmultivariate2$'votre.nom.de.colonne'
+
+# On crée une nouvelle colonne pour votre variable indépendante catégorielle (remplacez 'votre.nom.de.colonne' par le nom approprié)
+my_data.regmultivariate2$VI3.cat <- my_data.regmultivariate2$'votre.nom.de.colonne'
+```
+
+
+#### Données fictives
+```{r}
+set.seed(4321)
+regmultivariate2 <- rnorm(65)*3
+my_data.regmultivariate2 <- data.frame(
+  VD1.cont = rnorm(65) + 1*regmultivariate2,
+  VD2.cont = rnorm(65) + 0.8*regmultivariate2,
+  VI1.cont = rnorm(65)+ 0.2*regmultivariate2,
+  VI2.cont = rnorm(65)+ 0.1*regmultivariate2,
+  VI3.cat = rbinom(65, 1, 0.4))
+```
+
+#### Déclaration du type de variables
+```{r}
+my_data.regmultivariate2$VD1.cont <- as.numeric(as.character(my_data.regmultivariate2$VD1.cont))
+my_data.regmultivariate2$VD2.cont <- as.numeric(as.character(my_data.regmultivariate2$VD2.cont))
+my_data.regmultivariate2$VI1.cont <- as.numeric(as.character(my_data.regmultivariate2$VI1.cont))
+my_data.regmultivariate2$VI2.cont <- as.numeric(as.character(my_data.regmultivariate2$VI2.cont))
+my_data.regmultivariate2$VI3.cat <- factor(my_data.regmultivariate2$VI3.cat)
+```
+
+#### Inspection des données
+```{r}
+## Les graphiques situés sur la diagonale représentent la distribution des variables
+## Les graphiques (ou les valeurs de corrélation) situés au dessus et en dessous de la diagonale représentent l'association entre les différentes variables
+ggpairs(my_data.regmultivariate2,
+        lower = list(continuous = wrap("smooth", alpha = 0.7), combo = "box_no_facet"),
+        upper = list(combo = "facetdensity", discrete = "facetbar"), 
+        mapping = aes(alpha = 0.8)) + theme_bw()
+```
+
+#### Analyse des données 
+```{r warning=FALSE, message=FALSE}
+# calcul de la régression multivariée et stockage des résultats dans l’objet regmultivariate2.test
+regmultivariate2.test <- lm(formula = cbind(VD1.cont, VD2.cont) ~ VI1.cont + VI2.cont + VI3.cat,
+                    data = my_data.regmultivariate2)
+
+# obtention des résultats de la régression linéaire multivariée
+
+# effet multivarié
+Anova(regmultivariate2.test)
+
+# effet univarié
+summary(regmultivariate2.test)
+```
+
+#### Graphique
+```{r}
+# la ligne représente la pente de l'effet de VI1.cont ajusté par l'effet de VI2.cat sur VD1.cont
+adjusted.slope.regmultivariate2 <- do.call(rbind,
+  as.data.frame(
+    effect(
+      term = "VI1.cont", 
+      mod = regmultivariate2.test)))
+
+adjusted.slope.regmultivariate2$Outcome <- rep(c("VD1.cont", "VD2.cont"), each = nrow(adjusted.slope.regmultivariate2)/2)
+
+my_data.regmultivariate2.long <- my_data.regmultivariate2 %>% 
+  pivot_longer(cols = c(VD1.cont, VD2.cont),
+               names_to = "VD.names",
+               values_to = "VD")
+
+ggplot() +
+  geom_point(data = my_data.regmultivariate2.long, 
+       aes(x = VI1.cont, y = VD, color = VD.names),
+       size = 3, alpha = 0.4) + 
+  geom_ribbon(data = adjusted.slope.regmultivariate2, 
+         aes(x = VI1.cont, y = fit, 
+             fill = Outcome,
+             ymin = lower, ymax = upper), 
+         alpha=0.5) +
+  geom_line(data = adjusted.slope.regmultivariate2, 
+        aes(x = VI1.cont , y = fit, color = Outcome), 
+        size = 1) +
+  ylab("VD1.cont") + xlab("VI1.cont") + 
+  theme_bw() + 
+  theme(axis.title.y = element_text(size = 14, hjust = 0.5, face="bold"), 
+        axis.title.x = element_text(face="bold", size = 14, hjust = 0.5)) +
+  scale_color_manual(values = c("black", "red")) +
+  scale_fill_manual(values = c("lightgrey", "#FDA2A2")) +
+  guides(fill=FALSE)
+```
+
+#### Interpretation
+```{r,results='asis', echo=FALSE}
+df.regmultivariate2 <- do.call(rbind, lapply(c("Pillai"), 
+       function(i) fct.manova(Anova(regmultivariate2.test, type=3))))
+
+paste0(
+  "L'effet multivarié de VI1.cont sur VD1.cont et VD2.cont est statistiquement significatif (F = ", 
+  round(df.regmultivariate2$`approx F`[2], digits = 3), 
+  ", p = ",
+  round(df.regmultivariate2$`Pr(>F)`[2], digits = 6), 
+  "). Quelle que soit la variable dépendante, l'effet univarié de VI1.cont était significatif (toutes valeurs p non ajustées < ",
+  round(max(
+    summary(regmultivariate2.test)$'Response VD2'$coefficients[2,4],
+    summary(regmultivariate2.test)$'Response VD1'$coefficients[2,4]), digits = 4),
+  ")")
+```
