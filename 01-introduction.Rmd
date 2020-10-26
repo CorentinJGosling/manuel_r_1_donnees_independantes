@@ -1,4 +1,4 @@
-# Introduction {#intro}
+# Introduction
 
 + **ATTENTION**<br>
 Ce manuel n'a pas fait l'objet d'une évaluation indépendante par les pairs : il reste encore un document de travail. Des corrections/améliorations seront donc apportées dans les prochaines actualisations du manuel.

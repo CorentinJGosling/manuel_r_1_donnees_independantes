@@ -1,14 +1,8 @@
 bookdown::gitbook:
+  toc_depth: 4
   css: style.css
   config:
     toc:
       before: |
         <li><a href="./">Corentin J Gosling</a></li>
     download: ["pdf"]
-bookdown::pdf_book:
-  includes:
-    in_header: preamble.tex
-  latex_engine: xelatex
-  citation_package: natbib
-  keep_tex: yes
-  toc_depth: 3

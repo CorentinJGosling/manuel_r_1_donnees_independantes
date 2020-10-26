@@ -3,7 +3,7 @@
 ## Installation de R et R studio
 Pour ce manuel, nous vous recommandons de travailler avec R Studio. R Studio est simplement un add-on de R permettant d’avoir une interface graphique afin – entre autre – de pouvoir visualiser facilement ses données. 
 L’installation de R Studio se fait en 2 temps. Tout d’abord, rendez vous sur la page de R puis installez la version basique de R (https://cran.r-project.org/mirrors.html). Si vous travaillez sous Mac OS X, rendez vous sur : https://cran.r-project.org/bin/macosx/.
-Une fois que R est installé, vous allez pouvoir installer R Studio. Pour ce faire, rendez vous sur (https://rstudio.com/products/rstudio/download/). 
+Une fois que R est installé, vous allez pouvoir installer R Studio. Pour ce faire, rendez vous sur : https://rstudio.com/products/rstudio/download/. 
 
 ## Fonctionnement des packages
 Dans R, un « package » correspond à une sorte de petit programme pouvant être ajouté à R et vous permettant d’accéder à des fonctionnalités non directement disponibles dans la version basique de R. Par exemple, la version de base de R dispose d’une fonction permettant de calculer une corrélation (cor.test) mais ne comporte pas de fonction permettant de faire des modèles mixtes. Un « package » nommé lme4 a été créé pour permettre de réaliser ces modèles mixtes dans R. 
@@ -37,7 +37,7 @@ x + 3
 
 6. `:` Au sein d’une formule, le symbole `:` permet de créer une interaction entre deux termes. Par exemple, la commande `y <- x : z` signifie que l’on souhaite obtenir l’interaction entre `x` et `z`. Les commandes `y <- x + z + x:z` et `y <- x * z`  produisent des résultats identiques. <br>
 
-En résumé, pour construire un modèle statistique, R utilise les commandes suivantes
+En résumé, pour construire un modèle statistique, R utilise la syntaxte suivante
 ```{r eval=FALSE}
 formula = y ~ x # effet principal de x sur y 
 formula = y ~ x + z # effets principaux de x et z sur y 
