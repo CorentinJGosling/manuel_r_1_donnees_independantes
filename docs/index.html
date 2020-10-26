@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+<head>
+
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>Guide d’utilisation du logiciel R : données indépendantes</title>
+  <meta name="description" content="Ce manuel décrit la façon d’implanter différentes analyses statistiques adaptées aux données indépendantes dans le logiciel R. Il vous guidera également dans le choix des analyses en fonction de la nature de vos variables." />
+  <meta name="generator" content="bookdown 0.20 and GitBook 2.6.7" />
+
+  <meta property="og:title" content="Guide d’utilisation du logiciel R : données indépendantes" />
+  <meta property="og:type" content="book" />
+  
+  
+  <meta property="og:description" content="Ce manuel décrit la façon d’implanter différentes analyses statistiques adaptées aux données indépendantes dans le logiciel R. Il vous guidera également dans le choix des analyses en fonction de la nature de vos variables." />
+  
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Guide d’utilisation du logiciel R : données indépendantes" />
+  
+  <meta name="twitter:description" content="Ce manuel décrit la façon d’implanter différentes analyses statistiques adaptées aux données indépendantes dans le logiciel R. Il vous guidera également dans le choix des analyses en fonction de la nature de vos variables." />
+  
+
+<meta name="author" content="Corentin J Gosling" />
+
+
+<meta name="date" content="2020-10-26" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  
+  
+
+<link rel="next" href="familiarisation-avec-r.html"/>
+<script src="libs/jquery-2.2.3/jquery.min.js"></script>
+<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-clipboard.css" rel="stylesheet" />
+
+
+
+
+
+
+
+
+
+<script src="libs/accessible-code-block-0.0.1/empty-anchor.js"></script>
+
+
+<style type="text/css">
+code.sourceCode > span { display: inline-block; line-height: 1.25; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+<link rel="stylesheet" href="style.css" type="text/css" />
+</head>
+
+<body>
+
+
+
+  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
+
+    <div class="book-summary">
+      <nav role="navigation">
+
+<ul class="summary">
+<li><a href="./">Corentin J Gosling</a></li>
+
+<li class="divider"></li>
+<li class="chapter" data-level="1" data-path="index.html"><a href="index.html"><i class="fa fa-check"></i><b>1</b> Introduction</a></li>
+<li class="chapter" data-level="2" data-path="familiarisation-avec-r.html"><a href="familiarisation-avec-r.html"><i class="fa fa-check"></i><b>2</b> Familiarisation avec R</a><ul>
+<li class="chapter" data-level="2.1" data-path="familiarisation-avec-r.html"><a href="familiarisation-avec-r.html#installation-de-r-et-r-studio"><i class="fa fa-check"></i><b>2.1</b> Installation de R et R studio</a></li>
+<li class="chapter" data-level="2.2" data-path="familiarisation-avec-r.html"><a href="familiarisation-avec-r.html#fonctionnement-des-packages"><i class="fa fa-check"></i><b>2.2</b> Fonctionnement des packages</a></li>
+<li class="chapter" data-level="2.3" data-path="familiarisation-avec-r.html"><a href="familiarisation-avec-r.html#guillemets-et-r"><i class="fa fa-check"></i><b>2.3</b> Guillemets et R</a></li>
+<li class="chapter" data-level="2.4" data-path="familiarisation-avec-r.html"><a href="familiarisation-avec-r.html#six-commandes-indispensables"><i class="fa fa-check"></i><b>2.4</b> Six commandes INDISPENSABLES</a></li>
+<li class="chapter" data-level="2.5" data-path="familiarisation-avec-r.html"><a href="familiarisation-avec-r.html#quelques-commandes-non-indispensables"><i class="fa fa-check"></i><b>2.5</b> Quelques commandes non-indispensables</a></li>
+<li class="chapter" data-level="2.6" data-path="familiarisation-avec-r.html"><a href="familiarisation-avec-r.html#les-opérateurs-de-relation"><i class="fa fa-check"></i><b>2.6</b> Les opérateurs de relation</a></li>
+<li class="chapter" data-level="2.7" data-path="familiarisation-avec-r.html"><a href="familiarisation-avec-r.html#les-principaux-opérateurs-de-logique"><i class="fa fa-check"></i><b>2.7</b> Les principaux opérateurs de logique</a></li>
+</ul></li>
+<li class="chapter" data-level="3" data-path="etapes-dutilisation-du-manuel.html"><a href="etapes-dutilisation-du-manuel.html"><i class="fa fa-check"></i><b>3</b> Etapes d’utilisation du manuel</a><ul>
+<li class="chapter" data-level="3.1" data-path="etapes-dutilisation-du-manuel.html"><a href="etapes-dutilisation-du-manuel.html#etape-1-installation-des-packages-nécessaires"><i class="fa fa-check"></i><b>3.1</b> Etape 1: Installation des packages nécessaires</a></li>
+<li class="chapter" data-level="3.2" data-path="etapes-dutilisation-du-manuel.html"><a href="etapes-dutilisation-du-manuel.html#etape-2-sélection-des-analyses-statistiques-pertinentes"><i class="fa fa-check"></i><b>3.2</b> Etape 2 : Sélection des analyses statistiques pertinentes</a></li>
+<li class="chapter" data-level="3.3" data-path="etapes-dutilisation-du-manuel.html"><a href="etapes-dutilisation-du-manuel.html#etape-3-charger-votre-fichier-de-données"><i class="fa fa-check"></i><b>3.3</b> Etape 3 : Charger votre fichier de données</a></li>
+<li class="chapter" data-level="3.4" data-path="etapes-dutilisation-du-manuel.html"><a href="etapes-dutilisation-du-manuel.html#etape-4-déclarer-le-type-de-variable"><i class="fa fa-check"></i><b>3.4</b> Etape 4 : Déclarer le type de variable</a><ul>
+<li class="chapter" data-level="3.4.1" data-path="etapes-dutilisation-du-manuel.html"><a href="etapes-dutilisation-du-manuel.html#déclarer-une-variable-en-tant-que-variable-nominale-facteur"><i class="fa fa-check"></i><b>3.4.1</b> Déclarer une variable en tant que variable nominale / facteur</a></li>
+<li class="chapter" data-level="3.4.2" data-path="etapes-dutilisation-du-manuel.html"><a href="etapes-dutilisation-du-manuel.html#déclarer-une-variable-en-tant-que-variable-ordinale"><i class="fa fa-check"></i><b>3.4.2</b> Déclarer une variable en tant que variable ordinale</a></li>
+<li class="chapter" data-level="3.4.3" data-path="etapes-dutilisation-du-manuel.html"><a href="etapes-dutilisation-du-manuel.html#déclarer-une-variable-en-tant-que-variable-numérique"><i class="fa fa-check"></i><b>3.4.3</b> Déclarer une variable en tant que variable numérique</a></li>
+</ul></li>
+<li class="chapter" data-level="3.5" data-path="etapes-dutilisation-du-manuel.html"><a href="etapes-dutilisation-du-manuel.html#etape-5-inspecter-les-données-et-la-distribution-de-vos-variables"><i class="fa fa-check"></i><b>3.5</b> Etape 5 : Inspecter les données et la distribution de vos variables</a></li>
+<li class="chapter" data-level="3.6" data-path="etapes-dutilisation-du-manuel.html"><a href="etapes-dutilisation-du-manuel.html#etape-6-réaliser-votre-analyse-statistique-et-obtenir-des-tailles-deffet-etou-tests-post-hoc"><i class="fa fa-check"></i><b>3.6</b> Etape 6 : Réaliser votre analyse statistique et obtenir des tailles d’effet et/ou tests-post-hoc</a><ul>
+<li class="chapter" data-level="3.6.1" data-path="etapes-dutilisation-du-manuel.html"><a href="etapes-dutilisation-du-manuel.html#vous-nêtes-pas-habitué-aux-sorties-de-résultats-générées-par-r"><i class="fa fa-check"></i><b>3.6.1</b> Vous n’êtes pas habitué aux sorties de résultats générées par R</a></li>
+<li class="chapter" data-level="3.6.2" data-path="etapes-dutilisation-du-manuel.html"><a href="etapes-dutilisation-du-manuel.html#vous-êtes-habitué-aux-sorties-de-résultats-générées-par-r"><i class="fa fa-check"></i><b>3.6.2</b> Vous êtes habitué aux sorties de résultats générées par R</a></li>
+</ul></li>
+<li class="chapter" data-level="3.7" data-path="etapes-dutilisation-du-manuel.html"><a href="etapes-dutilisation-du-manuel.html#etape-7-obtenir-une-représentation-graphique"><i class="fa fa-check"></i><b>3.7</b> Etape 7 : Obtenir une représentation graphique</a></li>
+</ul></li>
+<li class="chapter" data-level="4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html"><i class="fa fa-check"></i><b>4</b> Réalisation des analyses statistiques</a><ul>
+<li class="chapter" data-level="4.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#une-seule-vd-numérique"><i class="fa fa-check"></i><b>4.1</b> Une seule VD numérique</a><ul>
+<li class="chapter" data-level="4.1.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#test-t-indépendant"><i class="fa fa-check"></i><b>4.1.1</b> Test t indépendant</a><ul>
+<li class="chapter" data-level="4.1.1.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#type-de-variables"><i class="fa fa-check"></i><b>4.1.1.1</b> Type de variables</a></li>
+<li class="chapter" data-level="4.1.1.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#packages-nécessaires"><i class="fa fa-check"></i><b>4.1.1.2</b> Packages nécessaires</a></li>
+<li class="chapter" data-level="4.1.1.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-réelles"><i class="fa fa-check"></i><b>4.1.1.3</b> Données réelles</a></li>
+<li class="chapter" data-level="4.1.1.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-fictives"><i class="fa fa-check"></i><b>4.1.1.4</b> Données fictives</a></li>
+<li class="chapter" data-level="4.1.1.5" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#déclaration-du-type-de-variable"><i class="fa fa-check"></i><b>4.1.1.5</b> Déclaration du type de variable</a></li>
+<li class="chapter" data-level="4.1.1.6" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#inspection-visuelle-des-données"><i class="fa fa-check"></i><b>4.1.1.6</b> Inspection visuelle des données</a></li>
+<li class="chapter" data-level="4.1.1.7" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#analyse-des-données"><i class="fa fa-check"></i><b>4.1.1.7</b> Analyse des données</a></li>
+<li class="chapter" data-level="4.1.1.8" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#graphique"><i class="fa fa-check"></i><b>4.1.1.8</b> Graphique</a></li>
+<li class="chapter" data-level="4.1.1.9" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#interpretation"><i class="fa fa-check"></i><b>4.1.1.9</b> Interpretation</a></li>
+</ul></li>
+<li class="chapter" data-level="4.1.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#anova-à-un-facteur"><i class="fa fa-check"></i><b>4.1.2</b> ANOVA à un facteur</a><ul>
+<li class="chapter" data-level="4.1.2.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#type-de-variables-1"><i class="fa fa-check"></i><b>4.1.2.1</b> Type de variables</a></li>
+<li class="chapter" data-level="4.1.2.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#packages-nécessaires-1"><i class="fa fa-check"></i><b>4.1.2.2</b> Packages nécessaires</a></li>
+<li class="chapter" data-level="4.1.2.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-réelles-1"><i class="fa fa-check"></i><b>4.1.2.3</b> Données réelles</a></li>
+<li class="chapter" data-level="4.1.2.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-fictives-1"><i class="fa fa-check"></i><b>4.1.2.4</b> Données fictives</a></li>
+<li class="chapter" data-level="4.1.2.5" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#déclaration-du-type-de-variables"><i class="fa fa-check"></i><b>4.1.2.5</b> Déclaration du type de variables</a></li>
+<li class="chapter" data-level="4.1.2.6" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#inspection-des-données"><i class="fa fa-check"></i><b>4.1.2.6</b> Inspection des données</a></li>
+<li class="chapter" data-level="4.1.2.7" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#analyse-des-données-1"><i class="fa fa-check"></i><b>4.1.2.7</b> Analyse des données</a></li>
+<li class="chapter" data-level="4.1.2.8" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#graphique-1"><i class="fa fa-check"></i><b>4.1.2.8</b> Graphique</a></li>
+<li class="chapter" data-level="4.1.2.9" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#interpretation-1"><i class="fa fa-check"></i><b>4.1.2.9</b> Interpretation</a></li>
+</ul></li>
+<li class="chapter" data-level="4.1.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#corrélation"><i class="fa fa-check"></i><b>4.1.3</b> Corrélation</a><ul>
+<li class="chapter" data-level="4.1.3.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#type-de-variables-2"><i class="fa fa-check"></i><b>4.1.3.1</b> Type de variables</a></li>
+<li class="chapter" data-level="4.1.3.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#packages-nécessaires-2"><i class="fa fa-check"></i><b>4.1.3.2</b> Packages nécessaires</a></li>
+<li class="chapter" data-level="4.1.3.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-réelles-2"><i class="fa fa-check"></i><b>4.1.3.3</b> Données réelles</a></li>
+<li class="chapter" data-level="4.1.3.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-fictives-2"><i class="fa fa-check"></i><b>4.1.3.4</b> Données fictives</a></li>
+<li class="chapter" data-level="4.1.3.5" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#déclaration-du-type-de-variables-1"><i class="fa fa-check"></i><b>4.1.3.5</b> Déclaration du type de variables</a></li>
+<li class="chapter" data-level="4.1.3.6" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#inspection-des-données-1"><i class="fa fa-check"></i><b>4.1.3.6</b> Inspection des données</a></li>
+<li class="chapter" data-level="4.1.3.7" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#analyse-des-données-2"><i class="fa fa-check"></i><b>4.1.3.7</b> Analyse des données</a></li>
+<li class="chapter" data-level="4.1.3.8" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#graphique-2"><i class="fa fa-check"></i><b>4.1.3.8</b> Graphique</a></li>
+<li class="chapter" data-level="4.1.3.9" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#interpretation-2"><i class="fa fa-check"></i><b>4.1.3.9</b> Interpretation</a></li>
+</ul></li>
+<li class="chapter" data-level="4.1.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#anova-multifactorielle"><i class="fa fa-check"></i><b>4.1.4</b> ANOVA multifactorielle</a><ul>
+<li class="chapter" data-level="4.1.4.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#type-de-variables-3"><i class="fa fa-check"></i><b>4.1.4.1</b> Type de variables</a></li>
+<li class="chapter" data-level="4.1.4.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#packages-nécessaires-3"><i class="fa fa-check"></i><b>4.1.4.2</b> Packages nécessaires</a></li>
+<li class="chapter" data-level="4.1.4.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-réelles-3"><i class="fa fa-check"></i><b>4.1.4.3</b> Données réelles</a></li>
+<li class="chapter" data-level="4.1.4.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-fictives-3"><i class="fa fa-check"></i><b>4.1.4.4</b> Données fictives</a></li>
+<li class="chapter" data-level="4.1.4.5" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#déclaration-du-type-de-variables-2"><i class="fa fa-check"></i><b>4.1.4.5</b> Déclaration du type de variables</a></li>
+<li class="chapter" data-level="4.1.4.6" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#inspection-des-données-2"><i class="fa fa-check"></i><b>4.1.4.6</b> Inspection des données</a></li>
+<li class="chapter" data-level="4.1.4.7" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#analyse-des-données-3"><i class="fa fa-check"></i><b>4.1.4.7</b> Analyse des données</a></li>
+<li class="chapter" data-level="4.1.4.8" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#graphique-3"><i class="fa fa-check"></i><b>4.1.4.8</b> Graphique</a></li>
+<li class="chapter" data-level="4.1.4.9" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#interpretation-3"><i class="fa fa-check"></i><b>4.1.4.9</b> Interpretation</a></li>
+</ul></li>
+<li class="chapter" data-level="4.1.5" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#regression-linéaire-multiple-1"><i class="fa fa-check"></i><b>4.1.5</b> Regression linéaire multiple 1</a><ul>
+<li class="chapter" data-level="4.1.5.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#type-de-variables-4"><i class="fa fa-check"></i><b>4.1.5.1</b> Type de variables</a></li>
+<li class="chapter" data-level="4.1.5.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#packages-nécessaires-4"><i class="fa fa-check"></i><b>4.1.5.2</b> Packages nécessaires</a></li>
+<li class="chapter" data-level="4.1.5.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-réelles-4"><i class="fa fa-check"></i><b>4.1.5.3</b> Données réelles</a></li>
+<li class="chapter" data-level="4.1.5.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-fictives-4"><i class="fa fa-check"></i><b>4.1.5.4</b> Données fictives</a></li>
+<li class="chapter" data-level="4.1.5.5" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#déclaration-du-type-de-variables-3"><i class="fa fa-check"></i><b>4.1.5.5</b> Déclaration du type de variables</a></li>
+<li class="chapter" data-level="4.1.5.6" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#inspection-des-données-3"><i class="fa fa-check"></i><b>4.1.5.6</b> Inspection des données</a></li>
+<li class="chapter" data-level="4.1.5.7" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#analyse-des-données-4"><i class="fa fa-check"></i><b>4.1.5.7</b> Analyse des données</a></li>
+<li class="chapter" data-level="4.1.5.8" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#graphique-4"><i class="fa fa-check"></i><b>4.1.5.8</b> Graphique</a></li>
+<li class="chapter" data-level="4.1.5.9" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#interpretation-4"><i class="fa fa-check"></i><b>4.1.5.9</b> Interpretation</a></li>
+</ul></li>
+<li class="chapter" data-level="4.1.6" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#ancova"><i class="fa fa-check"></i><b>4.1.6</b> ANCOVA</a><ul>
+<li class="chapter" data-level="4.1.6.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#type-de-variables-5"><i class="fa fa-check"></i><b>4.1.6.1</b> Type de variables</a></li>
+<li class="chapter" data-level="4.1.6.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#packages-nécessaires-5"><i class="fa fa-check"></i><b>4.1.6.2</b> Packages nécessaires</a></li>
+<li class="chapter" data-level="4.1.6.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-réelles-5"><i class="fa fa-check"></i><b>4.1.6.3</b> Données réelles</a></li>
+<li class="chapter" data-level="4.1.6.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-fictives-5"><i class="fa fa-check"></i><b>4.1.6.4</b> Données fictives</a></li>
+<li class="chapter" data-level="4.1.6.5" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#déclaration-du-type-de-variables-4"><i class="fa fa-check"></i><b>4.1.6.5</b> Déclaration du type de variables</a></li>
+<li class="chapter" data-level="4.1.6.6" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#inspection-des-données-4"><i class="fa fa-check"></i><b>4.1.6.6</b> Inspection des données</a></li>
+<li class="chapter" data-level="4.1.6.7" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#analyse-des-données-5"><i class="fa fa-check"></i><b>4.1.6.7</b> Analyse des données</a></li>
+<li class="chapter" data-level="4.1.6.8" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#graphique-5"><i class="fa fa-check"></i><b>4.1.6.8</b> Graphique</a></li>
+<li class="chapter" data-level="4.1.6.9" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#interpretation-5"><i class="fa fa-check"></i><b>4.1.6.9</b> Interpretation</a></li>
+</ul></li>
+<li class="chapter" data-level="4.1.7" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#regression-linéaire-multiple-2"><i class="fa fa-check"></i><b>4.1.7</b> Regression linéaire multiple 2</a><ul>
+<li class="chapter" data-level="4.1.7.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#type-de-variables-6"><i class="fa fa-check"></i><b>4.1.7.1</b> Type de variables</a></li>
+<li class="chapter" data-level="4.1.7.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#packages-nécessaires-6"><i class="fa fa-check"></i><b>4.1.7.2</b> Packages nécessaires</a></li>
+<li class="chapter" data-level="4.1.7.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-réelles-6"><i class="fa fa-check"></i><b>4.1.7.3</b> Données réelles</a></li>
+<li class="chapter" data-level="4.1.7.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-fictives-6"><i class="fa fa-check"></i><b>4.1.7.4</b> Données fictives</a></li>
+<li class="chapter" data-level="4.1.7.5" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#déclaration-du-type-de-variables-5"><i class="fa fa-check"></i><b>4.1.7.5</b> Déclaration du type de variables</a></li>
+<li class="chapter" data-level="4.1.7.6" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#inspection-des-données-5"><i class="fa fa-check"></i><b>4.1.7.6</b> Inspection des données</a></li>
+<li class="chapter" data-level="4.1.7.7" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#analyse-des-données-6"><i class="fa fa-check"></i><b>4.1.7.7</b> Analyse des données</a></li>
+<li class="chapter" data-level="4.1.7.8" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#graphique-6"><i class="fa fa-check"></i><b>4.1.7.8</b> Graphique</a></li>
+<li class="chapter" data-level="4.1.7.9" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#interpretation-6"><i class="fa fa-check"></i><b>4.1.7.9</b> Interpretation</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="4.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#une-seule-vd-catégorielle"><i class="fa fa-check"></i><b>4.2</b> Une seule VD catégorielle</a><ul>
+<li class="chapter" data-level="4.2.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#chi-deux-1"><i class="fa fa-check"></i><b>4.2.1</b> Chi-deux 1</a><ul>
+<li class="chapter" data-level="4.2.1.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#type-de-variables-7"><i class="fa fa-check"></i><b>4.2.1.1</b> Type de variables</a></li>
+<li class="chapter" data-level="4.2.1.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#packages-nécessaires-7"><i class="fa fa-check"></i><b>4.2.1.2</b> Packages nécessaires</a></li>
+<li class="chapter" data-level="4.2.1.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-réelles-7"><i class="fa fa-check"></i><b>4.2.1.3</b> Données réelles</a></li>
+<li class="chapter" data-level="4.2.1.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-fictives-7"><i class="fa fa-check"></i><b>4.2.1.4</b> Données fictives</a></li>
+<li class="chapter" data-level="4.2.1.5" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#déclaration-du-type-de-variables-6"><i class="fa fa-check"></i><b>4.2.1.5</b> Déclaration du type de variables</a></li>
+<li class="chapter" data-level="4.2.1.6" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#inspection-des-données-6"><i class="fa fa-check"></i><b>4.2.1.6</b> Inspection des données</a></li>
+<li class="chapter" data-level="4.2.1.7" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#analyse-des-données-7"><i class="fa fa-check"></i><b>4.2.1.7</b> Analyse des données</a></li>
+<li class="chapter" data-level="4.2.1.8" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#graphique-7"><i class="fa fa-check"></i><b>4.2.1.8</b> Graphique</a></li>
+<li class="chapter" data-level="4.2.1.9" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#interpretation-7"><i class="fa fa-check"></i><b>4.2.1.9</b> Interpretation</a></li>
+</ul></li>
+<li class="chapter" data-level="4.2.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#régression-logistique-binaire"><i class="fa fa-check"></i><b>4.2.2</b> Régression logistique binaire</a><ul>
+<li class="chapter" data-level="4.2.2.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#type-de-variables-8"><i class="fa fa-check"></i><b>4.2.2.1</b> Type de variables</a></li>
+<li class="chapter" data-level="4.2.2.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#packages-nécessaires-8"><i class="fa fa-check"></i><b>4.2.2.2</b> Packages nécessaires</a></li>
+<li class="chapter" data-level="4.2.2.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-réelles-8"><i class="fa fa-check"></i><b>4.2.2.3</b> Données réelles</a></li>
+<li class="chapter" data-level="4.2.2.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-fictives-8"><i class="fa fa-check"></i><b>4.2.2.4</b> Données fictives</a></li>
+<li class="chapter" data-level="4.2.2.5" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#déclaration-du-type-de-variables-7"><i class="fa fa-check"></i><b>4.2.2.5</b> Déclaration du type de variables</a></li>
+<li class="chapter" data-level="4.2.2.6" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#inspection-des-données-7"><i class="fa fa-check"></i><b>4.2.2.6</b> Inspection des données</a></li>
+<li class="chapter" data-level="4.2.2.7" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#analyse-des-données-8"><i class="fa fa-check"></i><b>4.2.2.7</b> Analyse des données</a></li>
+<li class="chapter" data-level="4.2.2.8" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#graphique-8"><i class="fa fa-check"></i><b>4.2.2.8</b> Graphique</a></li>
+<li class="chapter" data-level="4.2.2.9" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#interpretation-8"><i class="fa fa-check"></i><b>4.2.2.9</b> Interpretation</a></li>
+</ul></li>
+<li class="chapter" data-level="4.2.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#régression-logistique-binaire-multiple-1"><i class="fa fa-check"></i><b>4.2.3</b> Régression logistique binaire multiple 1</a><ul>
+<li class="chapter" data-level="4.2.3.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#type-de-variables-9"><i class="fa fa-check"></i><b>4.2.3.1</b> Type de variables</a></li>
+<li class="chapter" data-level="4.2.3.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#packages-nécessaires-9"><i class="fa fa-check"></i><b>4.2.3.2</b> Packages nécessaires</a></li>
+<li class="chapter" data-level="4.2.3.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-réelles-9"><i class="fa fa-check"></i><b>4.2.3.3</b> Données réelles</a></li>
+<li class="chapter" data-level="4.2.3.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-fictives-9"><i class="fa fa-check"></i><b>4.2.3.4</b> Données fictives</a></li>
+<li class="chapter" data-level="4.2.3.5" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#déclaration-du-type-de-variables-8"><i class="fa fa-check"></i><b>4.2.3.5</b> Déclaration du type de variables</a></li>
+<li class="chapter" data-level="4.2.3.6" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#inspection-des-données-8"><i class="fa fa-check"></i><b>4.2.3.6</b> Inspection des données</a></li>
+<li class="chapter" data-level="4.2.3.7" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#analyse-des-données-9"><i class="fa fa-check"></i><b>4.2.3.7</b> Analyse des données</a></li>
+<li class="chapter" data-level="4.2.3.8" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#graphique-9"><i class="fa fa-check"></i><b>4.2.3.8</b> Graphique</a></li>
+<li class="chapter" data-level="4.2.3.9" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#interpretation-9"><i class="fa fa-check"></i><b>4.2.3.9</b> Interpretation</a></li>
+</ul></li>
+<li class="chapter" data-level="4.2.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#régression-logistique-binaire-multiple-2"><i class="fa fa-check"></i><b>4.2.4</b> Régression logistique binaire multiple 2</a><ul>
+<li class="chapter" data-level="4.2.4.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#type-de-variables-10"><i class="fa fa-check"></i><b>4.2.4.1</b> Type de variables</a></li>
+<li class="chapter" data-level="4.2.4.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#packages-nécessaires-10"><i class="fa fa-check"></i><b>4.2.4.2</b> Packages nécessaires</a></li>
+<li class="chapter" data-level="4.2.4.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-réelles-10"><i class="fa fa-check"></i><b>4.2.4.3</b> Données réelles</a></li>
+<li class="chapter" data-level="4.2.4.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-fictives-10"><i class="fa fa-check"></i><b>4.2.4.4</b> Données fictives</a></li>
+<li class="chapter" data-level="4.2.4.5" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#déclaration-du-type-de-variables-9"><i class="fa fa-check"></i><b>4.2.4.5</b> Déclaration du type de variables</a></li>
+<li class="chapter" data-level="4.2.4.6" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#inspection-des-données-9"><i class="fa fa-check"></i><b>4.2.4.6</b> Inspection des données</a></li>
+<li class="chapter" data-level="4.2.4.7" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#analyse-des-données-10"><i class="fa fa-check"></i><b>4.2.4.7</b> Analyse des données</a></li>
+<li class="chapter" data-level="4.2.4.8" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#graphique-10"><i class="fa fa-check"></i><b>4.2.4.8</b> Graphique</a></li>
+<li class="chapter" data-level="4.2.4.9" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#interpretation-10"><i class="fa fa-check"></i><b>4.2.4.9</b> Interpretation</a></li>
+</ul></li>
+<li class="chapter" data-level="4.2.5" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#régression-logistique-binaire-multiple-3"><i class="fa fa-check"></i><b>4.2.5</b> Régression logistique binaire multiple 3</a><ul>
+<li class="chapter" data-level="4.2.5.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#type-de-variables-11"><i class="fa fa-check"></i><b>4.2.5.1</b> Type de variables</a></li>
+<li class="chapter" data-level="4.2.5.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#packages-nécessaires-11"><i class="fa fa-check"></i><b>4.2.5.2</b> Packages nécessaires</a></li>
+<li class="chapter" data-level="4.2.5.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-réelles-11"><i class="fa fa-check"></i><b>4.2.5.3</b> Données réelles</a></li>
+<li class="chapter" data-level="4.2.5.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-fictives-11"><i class="fa fa-check"></i><b>4.2.5.4</b> Données fictives</a></li>
+<li class="chapter" data-level="4.2.5.5" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#déclaration-du-type-de-variables-10"><i class="fa fa-check"></i><b>4.2.5.5</b> Déclaration du type de variables</a></li>
+<li class="chapter" data-level="4.2.5.6" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#inspection-des-données-10"><i class="fa fa-check"></i><b>4.2.5.6</b> Inspection des données</a></li>
+<li class="chapter" data-level="4.2.5.7" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#analyse-des-données-11"><i class="fa fa-check"></i><b>4.2.5.7</b> Analyse des données</a></li>
+<li class="chapter" data-level="4.2.5.8" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#graphique-11"><i class="fa fa-check"></i><b>4.2.5.8</b> Graphique</a></li>
+<li class="chapter" data-level="4.2.5.9" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#interpretation-11"><i class="fa fa-check"></i><b>4.2.5.9</b> Interpretation</a></li>
+</ul></li>
+<li class="chapter" data-level="4.2.6" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#chi-deux-2"><i class="fa fa-check"></i><b>4.2.6</b> Chi-deux 2</a><ul>
+<li class="chapter" data-level="4.2.6.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#type-de-variables-12"><i class="fa fa-check"></i><b>4.2.6.1</b> Type de variables</a></li>
+<li class="chapter" data-level="4.2.6.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#packages-nécessaires-12"><i class="fa fa-check"></i><b>4.2.6.2</b> Packages nécessaires</a></li>
+<li class="chapter" data-level="4.2.6.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-réelles-12"><i class="fa fa-check"></i><b>4.2.6.3</b> Données réelles</a></li>
+<li class="chapter" data-level="4.2.6.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-fictives-12"><i class="fa fa-check"></i><b>4.2.6.4</b> Données fictives</a></li>
+<li class="chapter" data-level="4.2.6.5" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#déclaration-du-type-de-variables-11"><i class="fa fa-check"></i><b>4.2.6.5</b> Déclaration du type de variables</a></li>
+<li class="chapter" data-level="4.2.6.6" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#inspection-des-données-11"><i class="fa fa-check"></i><b>4.2.6.6</b> Inspection des données</a></li>
+<li class="chapter" data-level="4.2.6.7" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#analyse-des-données-12"><i class="fa fa-check"></i><b>4.2.6.7</b> Analyse des données</a></li>
+<li class="chapter" data-level="4.2.6.8" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#graphique-12"><i class="fa fa-check"></i><b>4.2.6.8</b> Graphique</a></li>
+<li class="chapter" data-level="4.2.6.9" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#interpretation-12"><i class="fa fa-check"></i><b>4.2.6.9</b> Interpretation</a></li>
+</ul></li>
+<li class="chapter" data-level="4.2.7" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#régression-logistique-multinomiale-1"><i class="fa fa-check"></i><b>4.2.7</b> Régression logistique multinomiale 1</a><ul>
+<li class="chapter" data-level="4.2.7.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#type-de-variables-13"><i class="fa fa-check"></i><b>4.2.7.1</b> Type de variables</a></li>
+<li class="chapter" data-level="4.2.7.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#packages-nécessaires-13"><i class="fa fa-check"></i><b>4.2.7.2</b> Packages nécessaires</a></li>
+<li class="chapter" data-level="4.2.7.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-réelles-13"><i class="fa fa-check"></i><b>4.2.7.3</b> Données réelles</a></li>
+<li class="chapter" data-level="4.2.7.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-fictives-13"><i class="fa fa-check"></i><b>4.2.7.4</b> Données fictives</a></li>
+<li class="chapter" data-level="4.2.7.5" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#déclaration-du-type-de-variables-12"><i class="fa fa-check"></i><b>4.2.7.5</b> Déclaration du type de variables</a></li>
+<li class="chapter" data-level="4.2.7.6" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#inspection-des-données-12"><i class="fa fa-check"></i><b>4.2.7.6</b> Inspection des données</a></li>
+<li class="chapter" data-level="4.2.7.7" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#analyse-des-données-13"><i class="fa fa-check"></i><b>4.2.7.7</b> Analyse des données</a></li>
+<li class="chapter" data-level="4.2.7.8" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#graphique-13"><i class="fa fa-check"></i><b>4.2.7.8</b> Graphique</a></li>
+<li class="chapter" data-level="4.2.7.9" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#interpretation-13"><i class="fa fa-check"></i><b>4.2.7.9</b> Interpretation</a></li>
+</ul></li>
+<li class="chapter" data-level="4.2.8" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#régression-logistique-multinomiale-2"><i class="fa fa-check"></i><b>4.2.8</b> Régression logistique multinomiale 2</a><ul>
+<li class="chapter" data-level="4.2.8.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#type-de-variables-14"><i class="fa fa-check"></i><b>4.2.8.1</b> Type de variables</a></li>
+<li class="chapter" data-level="4.2.8.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#packages-nécessaires-14"><i class="fa fa-check"></i><b>4.2.8.2</b> Packages nécessaires</a></li>
+<li class="chapter" data-level="4.2.8.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-réelles-14"><i class="fa fa-check"></i><b>4.2.8.3</b> Données réelles</a></li>
+<li class="chapter" data-level="4.2.8.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-fictives-14"><i class="fa fa-check"></i><b>4.2.8.4</b> Données fictives</a></li>
+<li class="chapter" data-level="4.2.8.5" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#déclaration-du-type-de-variables-13"><i class="fa fa-check"></i><b>4.2.8.5</b> Déclaration du type de variables</a></li>
+<li class="chapter" data-level="4.2.8.6" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#inspection-des-données-13"><i class="fa fa-check"></i><b>4.2.8.6</b> Inspection des données</a></li>
+<li class="chapter" data-level="4.2.8.7" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#analyse-des-données-14"><i class="fa fa-check"></i><b>4.2.8.7</b> Analyse des données</a></li>
+<li class="chapter" data-level="4.2.8.8" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#graphique-14"><i class="fa fa-check"></i><b>4.2.8.8</b> Graphique</a></li>
+<li class="chapter" data-level="4.2.8.9" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#interpretation-14"><i class="fa fa-check"></i><b>4.2.8.9</b> Interpretation</a></li>
+</ul></li>
+<li class="chapter" data-level="4.2.9" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#régression-logistique-multinomiale-3"><i class="fa fa-check"></i><b>4.2.9</b> Régression logistique multinomiale 3</a><ul>
+<li class="chapter" data-level="4.2.9.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#type-de-variables-15"><i class="fa fa-check"></i><b>4.2.9.1</b> Type de variables</a></li>
+<li class="chapter" data-level="4.2.9.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#packages-nécessaires-15"><i class="fa fa-check"></i><b>4.2.9.2</b> Packages nécessaires</a></li>
+<li class="chapter" data-level="4.2.9.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-réelles-15"><i class="fa fa-check"></i><b>4.2.9.3</b> Données réelles</a></li>
+<li class="chapter" data-level="4.2.9.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-fictives-15"><i class="fa fa-check"></i><b>4.2.9.4</b> Données fictives</a></li>
+<li class="chapter" data-level="4.2.9.5" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#déclaration-du-type-de-variables-14"><i class="fa fa-check"></i><b>4.2.9.5</b> Déclaration du type de variables</a></li>
+<li class="chapter" data-level="4.2.9.6" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#inspection-des-données-14"><i class="fa fa-check"></i><b>4.2.9.6</b> Inspection des données</a></li>
+<li class="chapter" data-level="4.2.9.7" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#analyse-des-données-15"><i class="fa fa-check"></i><b>4.2.9.7</b> Analyse des données</a></li>
+<li class="chapter" data-level="4.2.9.8" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#graphique-15"><i class="fa fa-check"></i><b>4.2.9.8</b> Graphique</a></li>
+<li class="chapter" data-level="4.2.9.9" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#interpretation-15"><i class="fa fa-check"></i><b>4.2.9.9</b> Interpretation</a></li>
+</ul></li>
+<li class="chapter" data-level="4.2.10" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#régression-logistique-multinomiale-4"><i class="fa fa-check"></i><b>4.2.10</b> Régression logistique multinomiale 4</a><ul>
+<li class="chapter" data-level="4.2.10.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#type-de-variables-16"><i class="fa fa-check"></i><b>4.2.10.1</b> Type de variables</a></li>
+<li class="chapter" data-level="4.2.10.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#packages-nécessaires-16"><i class="fa fa-check"></i><b>4.2.10.2</b> Packages nécessaires</a></li>
+<li class="chapter" data-level="4.2.10.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-réelles-16"><i class="fa fa-check"></i><b>4.2.10.3</b> Données réelles</a></li>
+<li class="chapter" data-level="4.2.10.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-fictives-16"><i class="fa fa-check"></i><b>4.2.10.4</b> Données fictives</a></li>
+<li class="chapter" data-level="4.2.10.5" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#déclaration-du-type-de-variables-15"><i class="fa fa-check"></i><b>4.2.10.5</b> Déclaration du type de variables</a></li>
+<li class="chapter" data-level="4.2.10.6" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#inspection-des-données-15"><i class="fa fa-check"></i><b>4.2.10.6</b> Inspection des données</a></li>
+<li class="chapter" data-level="4.2.10.7" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#analyse-des-données-16"><i class="fa fa-check"></i><b>4.2.10.7</b> Analyse des données</a></li>
+<li class="chapter" data-level="4.2.10.8" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#graphique-16"><i class="fa fa-check"></i><b>4.2.10.8</b> Graphique</a></li>
+<li class="chapter" data-level="4.2.10.9" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#interpretation-16"><i class="fa fa-check"></i><b>4.2.10.9</b> Interpretation</a></li>
+</ul></li>
+<li class="chapter" data-level="4.2.11" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#régression-logistique-ordinale-1"><i class="fa fa-check"></i><b>4.2.11</b> Régression logistique ordinale 1</a><ul>
+<li class="chapter" data-level="4.2.11.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#type-de-variables-17"><i class="fa fa-check"></i><b>4.2.11.1</b> Type de variables</a></li>
+<li class="chapter" data-level="4.2.11.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#packages-nécessaires-17"><i class="fa fa-check"></i><b>4.2.11.2</b> Packages nécessaires</a></li>
+<li class="chapter" data-level="4.2.11.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-réelles-17"><i class="fa fa-check"></i><b>4.2.11.3</b> Données réelles</a></li>
+<li class="chapter" data-level="4.2.11.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-fictives-17"><i class="fa fa-check"></i><b>4.2.11.4</b> Données fictives</a></li>
+<li class="chapter" data-level="4.2.11.5" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#déclaration-du-type-de-variables-16"><i class="fa fa-check"></i><b>4.2.11.5</b> Déclaration du type de variables</a></li>
+<li class="chapter" data-level="4.2.11.6" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#inspection-des-données-16"><i class="fa fa-check"></i><b>4.2.11.6</b> Inspection des données</a></li>
+<li class="chapter" data-level="4.2.11.7" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#analyse-des-données-17"><i class="fa fa-check"></i><b>4.2.11.7</b> Analyse des données</a></li>
+<li class="chapter" data-level="4.2.11.8" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#graphique-17"><i class="fa fa-check"></i><b>4.2.11.8</b> Graphique</a></li>
+<li class="chapter" data-level="4.2.11.9" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#interpretation-17"><i class="fa fa-check"></i><b>4.2.11.9</b> Interpretation</a></li>
+</ul></li>
+<li class="chapter" data-level="4.2.12" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#régression-logistique-ordinale-2"><i class="fa fa-check"></i><b>4.2.12</b> Régression logistique ordinale 2</a><ul>
+<li class="chapter" data-level="4.2.12.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#type-de-variables-18"><i class="fa fa-check"></i><b>4.2.12.1</b> Type de variables</a></li>
+<li class="chapter" data-level="4.2.12.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#packages-nécessaires-18"><i class="fa fa-check"></i><b>4.2.12.2</b> Packages nécessaires</a></li>
+<li class="chapter" data-level="4.2.12.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-réelles-18"><i class="fa fa-check"></i><b>4.2.12.3</b> Données réelles</a></li>
+<li class="chapter" data-level="4.2.12.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-fictives-18"><i class="fa fa-check"></i><b>4.2.12.4</b> Données fictives</a></li>
+<li class="chapter" data-level="4.2.12.5" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#déclaration-du-type-de-variables-17"><i class="fa fa-check"></i><b>4.2.12.5</b> Déclaration du type de variables</a></li>
+<li class="chapter" data-level="4.2.12.6" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#inspection-des-données-17"><i class="fa fa-check"></i><b>4.2.12.6</b> Inspection des données</a></li>
+<li class="chapter" data-level="4.2.12.7" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#analyse-des-données-18"><i class="fa fa-check"></i><b>4.2.12.7</b> Analyse des données</a></li>
+<li class="chapter" data-level="4.2.12.8" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#graphique-18"><i class="fa fa-check"></i><b>4.2.12.8</b> Graphique</a></li>
+<li class="chapter" data-level="4.2.12.9" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#interpretation-18"><i class="fa fa-check"></i><b>4.2.12.9</b> Interpretation</a></li>
+</ul></li>
+<li class="chapter" data-level="4.2.13" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#régression-logistique-ordinale-3"><i class="fa fa-check"></i><b>4.2.13</b> Régression logistique ordinale 3</a><ul>
+<li class="chapter" data-level="4.2.13.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#type-de-variables-19"><i class="fa fa-check"></i><b>4.2.13.1</b> Type de variables</a></li>
+<li class="chapter" data-level="4.2.13.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#packages-nécessaires-19"><i class="fa fa-check"></i><b>4.2.13.2</b> Packages nécessaires</a></li>
+<li class="chapter" data-level="4.2.13.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-réelles-19"><i class="fa fa-check"></i><b>4.2.13.3</b> Données réelles</a></li>
+<li class="chapter" data-level="4.2.13.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-fictives-19"><i class="fa fa-check"></i><b>4.2.13.4</b> Données fictives</a></li>
+<li class="chapter" data-level="4.2.13.5" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#déclaration-du-type-de-variables-18"><i class="fa fa-check"></i><b>4.2.13.5</b> Déclaration du type de variables</a></li>
+<li class="chapter" data-level="4.2.13.6" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#inspection-des-données-18"><i class="fa fa-check"></i><b>4.2.13.6</b> Inspection des données</a></li>
+<li class="chapter" data-level="4.2.13.7" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#analyse-des-données-19"><i class="fa fa-check"></i><b>4.2.13.7</b> Analyse des données</a></li>
+<li class="chapter" data-level="4.2.13.8" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#graphique-19"><i class="fa fa-check"></i><b>4.2.13.8</b> Graphique</a></li>
+<li class="chapter" data-level="4.2.13.9" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#interpretation-19"><i class="fa fa-check"></i><b>4.2.13.9</b> Interpretation</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="4.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#plusieurs-vd-numériques"><i class="fa fa-check"></i><b>4.3</b> Plusieurs VD numériques</a><ul>
+<li class="chapter" data-level="4.3.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#manova"><i class="fa fa-check"></i><b>4.3.1</b> MANOVA</a><ul>
+<li class="chapter" data-level="4.3.1.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#type-de-variables-20"><i class="fa fa-check"></i><b>4.3.1.1</b> Type de variables</a></li>
+<li class="chapter" data-level="4.3.1.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#packages-nécessaires-20"><i class="fa fa-check"></i><b>4.3.1.2</b> Packages nécessaires</a></li>
+<li class="chapter" data-level="4.3.1.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-réelles-20"><i class="fa fa-check"></i><b>4.3.1.3</b> Données réelles</a></li>
+<li class="chapter" data-level="4.3.1.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-fictives-20"><i class="fa fa-check"></i><b>4.3.1.4</b> Données fictives</a></li>
+<li class="chapter" data-level="4.3.1.5" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#déclaration-du-type-de-variables-19"><i class="fa fa-check"></i><b>4.3.1.5</b> Déclaration du type de variables</a></li>
+<li class="chapter" data-level="4.3.1.6" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#inspection-des-données-19"><i class="fa fa-check"></i><b>4.3.1.6</b> Inspection des données</a></li>
+<li class="chapter" data-level="4.3.1.7" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#analyse-des-données-20"><i class="fa fa-check"></i><b>4.3.1.7</b> Analyse des données</a></li>
+<li class="chapter" data-level="4.3.1.8" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#graphique-20"><i class="fa fa-check"></i><b>4.3.1.8</b> Graphique</a></li>
+<li class="chapter" data-level="4.3.1.9" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#interprétation"><i class="fa fa-check"></i><b>4.3.1.9</b> Interprétation</a></li>
+</ul></li>
+<li class="chapter" data-level="4.3.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#regression-linéaire-multivariée-1"><i class="fa fa-check"></i><b>4.3.2</b> Regression linéaire multivariée 1</a><ul>
+<li class="chapter" data-level="4.3.2.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#type-de-variables-21"><i class="fa fa-check"></i><b>4.3.2.1</b> Type de variables</a></li>
+<li class="chapter" data-level="4.3.2.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#packages-nécessaires-21"><i class="fa fa-check"></i><b>4.3.2.2</b> Packages nécessaires</a></li>
+<li class="chapter" data-level="4.3.2.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-réelles-21"><i class="fa fa-check"></i><b>4.3.2.3</b> Données réelles</a></li>
+<li class="chapter" data-level="4.3.2.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-fictives-21"><i class="fa fa-check"></i><b>4.3.2.4</b> Données fictives</a></li>
+<li class="chapter" data-level="4.3.2.5" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#déclaration-du-type-de-variables-20"><i class="fa fa-check"></i><b>4.3.2.5</b> Déclaration du type de variables</a></li>
+<li class="chapter" data-level="4.3.2.6" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#inspection-des-données-20"><i class="fa fa-check"></i><b>4.3.2.6</b> Inspection des données</a></li>
+<li class="chapter" data-level="4.3.2.7" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#analyse-des-données-21"><i class="fa fa-check"></i><b>4.3.2.7</b> Analyse des données</a></li>
+<li class="chapter" data-level="4.3.2.8" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#graphique-21"><i class="fa fa-check"></i><b>4.3.2.8</b> Graphique</a></li>
+<li class="chapter" data-level="4.3.2.9" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#interprétation-1"><i class="fa fa-check"></i><b>4.3.2.9</b> Interprétation</a></li>
+</ul></li>
+<li class="chapter" data-level="4.3.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#mancova"><i class="fa fa-check"></i><b>4.3.3</b> MANCOVA</a><ul>
+<li class="chapter" data-level="4.3.3.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#type-de-variables-22"><i class="fa fa-check"></i><b>4.3.3.1</b> Type de variables</a></li>
+<li class="chapter" data-level="4.3.3.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#packages-nécessaires-22"><i class="fa fa-check"></i><b>4.3.3.2</b> Packages nécessaires</a></li>
+<li class="chapter" data-level="4.3.3.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-réelles-22"><i class="fa fa-check"></i><b>4.3.3.3</b> Données réelles</a></li>
+<li class="chapter" data-level="4.3.3.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-fictives-22"><i class="fa fa-check"></i><b>4.3.3.4</b> Données fictives</a></li>
+<li class="chapter" data-level="4.3.3.5" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#déclaration-du-type-de-variables-21"><i class="fa fa-check"></i><b>4.3.3.5</b> Déclaration du type de variables</a></li>
+<li class="chapter" data-level="4.3.3.6" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#inspection-des-données-21"><i class="fa fa-check"></i><b>4.3.3.6</b> Inspection des données</a></li>
+<li class="chapter" data-level="4.3.3.7" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#analyse-des-données-22"><i class="fa fa-check"></i><b>4.3.3.7</b> Analyse des données</a></li>
+<li class="chapter" data-level="4.3.3.8" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#graphique-22"><i class="fa fa-check"></i><b>4.3.3.8</b> Graphique</a></li>
+<li class="chapter" data-level="4.3.3.9" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#interprétation-2"><i class="fa fa-check"></i><b>4.3.3.9</b> Interprétation</a></li>
+</ul></li>
+<li class="chapter" data-level="4.3.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#regression-linéaire-multivariée-2"><i class="fa fa-check"></i><b>4.3.4</b> Regression linéaire multivariée 2</a><ul>
+<li class="chapter" data-level="4.3.4.1" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#type-de-variables-23"><i class="fa fa-check"></i><b>4.3.4.1</b> Type de variables</a></li>
+<li class="chapter" data-level="4.3.4.2" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#packages-nécessaires-23"><i class="fa fa-check"></i><b>4.3.4.2</b> Packages nécessaires</a></li>
+<li class="chapter" data-level="4.3.4.3" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-réelles-23"><i class="fa fa-check"></i><b>4.3.4.3</b> Données réelles</a></li>
+<li class="chapter" data-level="4.3.4.4" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#données-fictives-23"><i class="fa fa-check"></i><b>4.3.4.4</b> Données fictives</a></li>
+<li class="chapter" data-level="4.3.4.5" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#déclaration-du-type-de-variables-22"><i class="fa fa-check"></i><b>4.3.4.5</b> Déclaration du type de variables</a></li>
+<li class="chapter" data-level="4.3.4.6" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#inspection-des-données-22"><i class="fa fa-check"></i><b>4.3.4.6</b> Inspection des données</a></li>
+<li class="chapter" data-level="4.3.4.7" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#analyse-des-données-23"><i class="fa fa-check"></i><b>4.3.4.7</b> Analyse des données</a></li>
+<li class="chapter" data-level="4.3.4.8" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#graphique-23"><i class="fa fa-check"></i><b>4.3.4.8</b> Graphique</a></li>
+<li class="chapter" data-level="4.3.4.9" data-path="réalisation-des-analyses-statistiques.html"><a href="réalisation-des-analyses-statistiques.html#interpretation-20"><i class="fa fa-check"></i><b>4.3.4.9</b> Interpretation</a></li>
+</ul></li>
+</ul></li>
+</ul></li>
+</ul>
+
+      </nav>
+    </div>
+
+    <div class="book-body">
+      <div class="body-inner">
+        <div class="book-header" role="navigation">
+          <h1>
+            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">Guide d’utilisation du logiciel R : données indépendantes</a>
+          </h1>
+        </div>
+
+        <div class="page-wrapper" tabindex="-1" role="main">
+          <div class="page-inner">
+
+            <section class="normal" id="section-">
+<div id="header">
+<h1 class="title">Guide d’utilisation du logiciel R : données indépendantes</h1>
+<p class="author"><em>Corentin J Gosling</em></p>
+<p class="date"><em>2020-10-26</em></p>
+</div>
+<div id="introduction" class="section level1">
+<h1><span class="header-section-number">Chapitre 1</span> Introduction</h1>
+<ul>
+<li><p><strong>ATTENTION</strong><br>
+Ce manuel n’a pas fait l’objet d’une évaluation indépendante par les pairs : il reste encore un document de travail. Des corrections/améliorations seront donc apportées dans les prochaines actualisations du manuel.</p></li>
+<li><p><strong>Quel est le but de ce manuel</strong> ?<br>
+L’unique objectif de ce manuel est de fournir un support technique pour analyser des données <strong>indépendantes</strong> à l’aide du logiciel R.</p></li>
+<li><p><strong>Que sont des données indépendantes</strong><br>
+Des données indépendantes correspondent à des plans expérimentaux où chacune de vos observations collectées sont indépendantes les unes des autres. Par exemple, si vos unités statistiques sont des individus, les données seront dites indépendantes si les informations collectées auprès d’un individu sont indépendantes des informations collectées auprès des autres individus de l’échantillon.<br></p>
+<ul>
+<li><p>En psychologie cognitive, des études classiques produisant des données non-indépendantes sont les études demandant à des participants de compléter des tâches expérimentales comportant de multiples essais. Dans cette situation, votre unité statistique de plus bas niveau (l’essai) n’est pas indépendante. La performance à un essai donné aura plus de chance d’être corrélée à la performance aux autres essais du même individu qu’à la performance aux essais réalisés par d’autres individus.</p></li>
+<li><p>En neuropsychologie, des études classiques produisant des données non-indépendantes sont les études collectant des données de patients provenant de divers hôpitaux. Dans cette situation, votre unité statistique de plus bas niveau (le patient) n’est pas indépendante. La performance d’un patient aura plus de chance d’être corrélée à la performance de patients du même hôpital qu’à la performance de patients provenant d’hôpitaux différents.</p></li>
+<li><p>En psychologie développementale, des études classiques produisant des données non-indépendantes sont les études collectant des données d’enfants répartis dans différentes classes ou écoles. Là encore, dans cette situation, votre unité statistique de plus bas niveau (l’enfant) n’est pas indépendante. La performance d’un enfant aura plus de chances d’être corrélée à la performance d’enfants de la même classe/école qu’à la performance d’enfants provenant de classes/écoles différentes.</p></li>
+</ul></li>
+</ul>
+<p>Dans ces situations de non-indépendance, deux solutions sont généralement utilisées. <br></p>
+<ol style="list-style-type: decimal">
+<li><p>La solution la plus recommandée est d’utiliser des analyses statistiques adaptées aux données dépendantes, parfois appelées analyses hiérarchiques ou multiniveaux (telles que les ANOVAs à mesures répétées, les modèles mixtes, les équations d’estimation généralisées, etc..). La façon d’implanter ces analyses dans R n’est pas décrite dans ce manuel, qui est centré sur les analyses adaptées aux données indépendantes. <br></p></li>
+<li><p>Une autre solution est d’aggréger vos unités statistiques de plus bas niveau non-indépendantes (e.g., les différents essais d’un même participant ou les différents enfants d’une même classe) au sein d’unités statistiques de plus haut niveau mais indépendantes. Dans une situation expérimentale comportant une tâche avec de nombreux essais, il est possible d’aggréger tous les essais en en faisant une moyenne pour chaque participant. Ce score aggrégé, propre à chaque participant, sera parfaitement indépendant du score aggrégé des autres participants. Il devient possible d’utiliser des analyses statistiques pour données indépendantes sur ce score aggrégé. Ici votre unité statistique de bas niveau (les essais) était non-indépendante, et l’utilisation d’une unité statistique de plus haut niveau (les participants) permet d’avoir des données indépendantes. Cependant, cette seconde approche n’est pas recommandée (voir par exemple la discussion au sujet des données non-indépendantes proposée par Aarts et al. (2014) dans Nature Neuroscience).</p></li>
+</ol>
+<ul>
+<li><p><strong>Pourquoi décrire ces analyses sur le logiciel R et non des logiciels standards (SPSS, Jamovi, … ?)</strong><br>
+Le logiciel R présente plusieurs avantages comparativements à certains logiciels statistiques plus fréquemment utilisés : (1) R est gratuit, (2) R permet de réaliser une très grande variété d’analyses statistiques et (3) R permet de partager aux lecteurs de vos articles le code qui accompagne l’analyse des données.</p></li>
+<li><p><strong>Les analyses statistiques décrites dans ce manuel sont-elles suffisantes pour analyser des données collectées lors d’une étude ?</strong><br>
+A l’heure actuelle, en plus des analyses statistiques, ce manuel décrit comment observer la distribution de vos variables, comment faire des graphiques illustrant les analyses statistiques réalisées et comment réaliser différents tests post-hoc et obtenir des tailles d’effet.<br>
+En revanche, ce manuel suppose que les hypothèses fondamentales des différentes analyses statistiques sont respectées (e.g., si vous utilisez une régression linéaire, le code proposé dans ce manuel suppose que l’hypothèse de normalité des résidus est respectée).<br></p></li>
+</ul>
+
+</div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+
+<a href="familiarisation-avec-r.html" class="navigation navigation-next navigation-unique" aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+    </div>
+  </div>
+<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/lunr.js"></script>
+<script src="libs/gitbook-2.6.7/js/clipboard.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
+<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-clipboard.js"></script>
+<script>
+gitbook.require(["gitbook"], function(gitbook) {
+gitbook.start({
+"sharing": {
+"github": false,
+"facebook": true,
+"twitter": true,
+"linkedin": false,
+"weibo": false,
+"instapaper": false,
+"vk": false,
+"all": ["facebook", "twitter", "linkedin", "weibo", "instapaper"]
+},
+"fontsettings": {
+"theme": "white",
+"family": "sans",
+"size": 2
+},
+"edit": {
+"link": null,
+"text": null
+},
+"history": {
+"link": null,
+"text": null
+},
+"view": {
+"link": null,
+"text": null
+},
+"download": ["Manuel_R_independant.pdf"],
+"toc": {
+"collapse": "subsection"
+}
+});
+});
+</script>
+
+</body>
+
+</html>
