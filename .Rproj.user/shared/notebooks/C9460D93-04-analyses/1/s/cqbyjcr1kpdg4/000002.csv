@@ -1,4 +1,0 @@
-"0","my_data.regord2$VD1.ord <- ordered(my_data.regord2$VD1.ord, "
-"0","                                   levels = c(""Faible"", ""Modere"", ""Severe""))"
-"0","my_data.regord2$VI1.cont <- as.numeric(as.character(my_data.regord2$VI1.cont))"
-"0",""
